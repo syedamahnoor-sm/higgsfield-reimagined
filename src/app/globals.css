@@ -56,52 +56,81 @@
   --spacing-mobile-nav: 64px;
 }
 
-:root {
-  color-scheme: dark;
+/* Base styles live in the base layer so Tailwind utilities can override them. */
+@layer base {
+  :root {
+    color-scheme: dark;
+  }
+
+  html,
+  body {
+    background: var(--color-canvas);
+    color: var(--color-fg);
+  }
+
+  body {
+    font-family: var(--font-sans);
+    font-feature-settings: "ss01", "cv11";
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  ::selection {
+    background: rgb(255 106 61 / 0.35);
+    color: var(--color-fg);
+  }
+
+  /* One consistent, highly visible keyboard focus treatment. */
+  :focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+
+  :focus:not(:focus-visible) {
+    outline: none;
+  }
+
+  /* Quiet scrollbars that don't compete with media. */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: rgb(255 255 255 / 0.12) transparent;
+  }
 }
 
-html,
-body {
-  background: var(--color-canvas);
-  color: var(--color-fg);
+/* Loading surface for media that is still being generated. */
+@keyframes shimmer {
+  from {
+    background-position: 150% 0;
+  }
+  to {
+    background-position: -50% 0;
+  }
 }
 
-body {
-  font-family: var(--font-sans);
-  font-feature-settings: "ss01", "cv11";
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  text-rendering: optimizeLegibility;
+@utility shimmer {
+  background-color: var(--color-surface-2);
+  background-image: linear-gradient(
+    100deg,
+    transparent 30%,
+    rgb(255 255 255 / 0.05) 45%,
+    rgb(255 106 61 / 0.06) 50%,
+    rgb(255 255 255 / 0.05) 55%,
+    transparent 70%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.8s linear infinite;
 }
 
-::selection {
-  background: rgb(255 106 61 / 0.35);
-  color: var(--color-fg);
-}
-
-/* One consistent, highly visible keyboard focus treatment. */
-:focus-visible {
-  outline: 2px solid var(--color-accent);
-  outline-offset: 2px;
-}
-
-:focus:not(:focus-visible) {
-  outline: none;
-}
-
-/* Quiet scrollbars that don't compete with media. */
-* {
-  scrollbar-width: thin;
-  scrollbar-color: rgb(255 255 255 / 0.12) transparent;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-    scroll-behavior: auto !important;
+@layer base {
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
   }
 }

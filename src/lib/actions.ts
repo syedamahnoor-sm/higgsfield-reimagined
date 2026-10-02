@@ -1,0 +1,83 @@
+import { closestAspect } from "@/lib/aspect";
+import { downloadAsset } from "@/lib/media/download";
+import type { Asset, GenSettings, MediaReference } from "@/lib/types";
+import { useStudio } from "@/store/studio";
+import { toast } from "@/store/toasts";
+
+/**
+ * The three ways a result feeds the next creation. They are deliberately distinct:
+ *
+ * - Remix:            reuse the prompt and settings.
+ * - Use as reference: reuse the media itself as input.
+ * - Animate:          send the image into the Video workflow as its source.
+ */
+
+export const PROMPT_INPUT_ID = "composer-prompt";
+
+export function focusPrompt() {
+  // Wait a frame so a just-updated textarea has rendered its new value.
+  requestAnimationFrame(() => {
+    const el = document.getElementById(PROMPT_INPUT_ID) as HTMLTextAreaElement | null;
+    if (!el) return;
+    el.focus();
+    el.setSelectionRange(el.value.length, el.value.length);
+  });
+}
+
+/** Replaces the image draft, offering Undo when there was something to lose. */
+export function loadImageDraft(settings: GenSettings, message: string, parentId?: string) {
+  const { drafts, draftParents, setDraft } = useStudio.getState();
+  const previous = drafts.image;
+  const previousParent = draftParents.image;
+  setDraft("image", { ...settings, mode: "image" }, parentId);
+  focusPrompt();
+  const hadWork = previous.prompt.trim().length > 0 || previous.reference;
+  toast({
+    message,
+    action: hadWork
+      ? { label: "Undo", onClick: () => useStudio.getState().setDraft("image", previous, previousParent) }
+      : undefined,
+  });
+}
+
+export function remixAsset(asset: Asset) {
+  loadImageDraft(asset.settings, "Prompt and settings loaded into the composer", asset.id);
+}
+
+export function assetAsReference(asset: Asset): MediaReference {
+  return { source: "asset", id: asset.id, url: asset.url, width: asset.width, height: asset.height, color: asset.color };
+}
+
+export function setAssetAsReference(asset: Asset) {
+  const { drafts, updateDraft } = useStudio.getState();
+  const previous = drafts.image.reference;
+  updateDraft("image", { reference: assetAsReference(asset) });
+  focusPrompt();
+  toast({
+    message: "Image set as the reference for your next generation",
+    action: { label: "Undo", onClick: () => useStudio.getState().updateDraft("image", { reference: previous }) },
+  });
+}
+
+/** Prepares the Video draft with this image as its source. The caller navigates to /create/video. */
+export function prepareAnimate(asset: Asset) {
+  const { drafts, setDraft } = useStudio.getState();
+  setDraft(
+    "video",
+    {
+      ...drafts.video,
+      prompt: asset.settings.prompt,
+      reference: assetAsReference(asset),
+      aspect: closestAspect(asset.width, asset.height),
+    },
+    asset.id,
+  );
+}
+
+export async function downloadWithFeedback(asset: Asset) {
+  try {
+    await downloadAsset(asset);
+  } catch (error) {
+    toast({ tone: "error", message: error instanceof Error ? error.message : "Download failed." });
+  }
+}

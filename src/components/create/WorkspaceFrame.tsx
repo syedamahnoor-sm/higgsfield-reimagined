@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { EngineBadge } from "./EngineBadge";
 import { ModeSwitch } from "./ModeSwitch";
 
 /**
@@ -11,6 +12,7 @@ export function WorkspaceFrame({ children }: { children: ReactNode }) {
     <div className="flex min-h-0 flex-1 flex-col md:h-dvh">
       <div className="flex h-14 shrink-0 items-center justify-between gap-4 px-4 sm:px-6">
         <ModeSwitch />
+        <EngineBadge />
       </div>
       <div className="flex min-h-[60dvh] flex-1 px-2 pb-2 sm:px-3 sm:pb-3 md:min-h-0">
         <section

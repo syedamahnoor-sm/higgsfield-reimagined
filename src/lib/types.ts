@@ -19,13 +19,15 @@ export type MotionPreset = "push-in" | "pull-out" | "pan" | "orbit" | "drift" | 
 
 export type VideoDuration = 5 | 10;
 
-export interface MediaReference {
-  /** Set when the reference is an existing Library asset. */
-  assetId?: string;
-  url: string;
-  width: number;
-  height: number;
-}
+/**
+ * A reference image used as input for a generation.
+ *
+ * Uploads live in IndexedDB and are resolved to a fresh object URL at runtime,
+ * so nothing temporary is persisted. Asset references point at stable media URLs.
+ */
+export type MediaReference =
+  | { source: "upload"; id: string; name: string; width: number; height: number; color?: string }
+  | { source: "asset"; id: string; url: string; width: number; height: number; color?: string };
 
 export interface GenSettings {
   mode: Mode;
@@ -58,6 +60,15 @@ export interface Asset {
   favorite: boolean;
   createdAt: number;
   jobId: string;
+  /** Average colour, used for colour-aware matching when reused as a reference. */
+  color?: string;
+  /** Credit for media that came from a curated photo set rather than a model. */
+  attribution?: Attribution;
+}
+
+export interface Attribution {
+  name: string;
+  url: string;
 }
 
 export type JobStatus = "queued" | "running" | "done" | "failed";
@@ -70,7 +81,14 @@ export interface Job {
   progress: number;
   assetIds: string[];
   error?: string;
+  /** Engine-provided note about the result, e.g. how closely the prompt was matched. */
+  note?: string;
+  engineId: string;
+  resolvedModel?: string;
+  /** Explore item or asset the draft was remixed from, carried onto the produced assets. */
+  parentId?: string;
   createdAt: number;
+  finishedAt?: number;
 }
 
 export interface ExploreItem {
