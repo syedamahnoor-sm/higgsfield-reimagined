@@ -4,7 +4,18 @@ import type { Asset, GenSettings, Job, Mode } from "@/lib/types";
 
 export const DEFAULT_DRAFTS: Record<Mode, GenSettings> = {
   image: { mode: "image", prompt: "", intent: "auto", aspect: "1:1", count: 2 },
-  video: { mode: "video", prompt: "", intent: "auto", aspect: "16:9", count: 1, motion: "push-in", duration: 5 },
+  video: {
+    mode: "video",
+    prompt: "",
+    intent: "auto",
+    aspect: "16:9",
+    count: 1,
+    motion: "push-in",
+    duration: 5,
+    videoEngine: "ai",
+    resolution: "480p",
+    camera: "push-in",
+  },
 };
 
 interface StudioState {

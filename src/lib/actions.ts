@@ -50,7 +50,11 @@ export function loadImageDraft(settings: GenSettings, message: string, parentId?
 /** Remix reuses settings: images go back to the Image composer, motion clips to the Video composer. */
 export function remixAsset(asset: Asset) {
   if (asset.kind === "video") {
-    loadVideoDraft(asset.settings, "Motion settings loaded. Adjust them and animate again.", asset.parentId);
+    const message =
+      asset.settings.videoEngine === "ai"
+        ? "Video prompt and settings loaded. Adjust them and generate again."
+        : "Motion settings loaded. Adjust them and animate again.";
+    loadVideoDraft(asset.settings, message, asset.parentId);
     return;
   }
   loadImageDraft(asset.settings, "Prompt and settings loaded into the composer", asset.id);

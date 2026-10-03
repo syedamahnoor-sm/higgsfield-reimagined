@@ -61,11 +61,12 @@ function canvasToBlob(canvas: HTMLCanvasElement, type: string, quality: number) 
 }
 
 /**
- * Stores a generated image locally and returns its stable media URL. AI
- * results are kept as bytes in IndexedDB rather than as provider URLs, which
- * may expire; the "local-media:" URL resolves to a fresh object URL on demand.
+ * Stores generated media (AI images and videos) locally and returns its
+ * stable media URL. Results are kept as bytes in IndexedDB rather than as
+ * provider URLs, which may expire; the "local-media:" URL resolves to a fresh
+ * object URL on demand.
  */
-export async function saveGeneratedImage(blob: Blob) {
+export async function saveLocalMedia(blob: Blob) {
   const id = createId("gen");
   await tx("readwrite", (s) => s.put(blob, id));
   urlCache.set(id, URL.createObjectURL(blob));

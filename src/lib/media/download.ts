@@ -27,6 +27,7 @@ function slug(text: string) {
  * at its stated output resolution.
  */
 export async function downloadAsset(asset: Asset) {
+  if (asset.renderer === "file") return downloadFile(asset);
   const src = await resolveMediaUrl(asset.url);
   if (!src) throw new Error("This image is no longer available on this device.");
   const img = await loadImage(src);
@@ -45,6 +46,22 @@ export async function downloadAsset(asset: Asset) {
   const a = document.createElement("a");
   a.href = url;
   a.download = `ember-${slug(asset.settings.prompt)}-${asset.id.slice(-6)}.jpg`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 10_000);
+}
+
+/** Real video files are downloaded byte-for-byte, exactly as stored. */
+async function downloadFile(asset: Asset) {
+  const src = await resolveMediaUrl(asset.url);
+  if (!src) throw new Error("This video is no longer available on this device.");
+  const blob = await (await fetch(src)).blob();
+  const extension = blob.type.includes("webm") ? "webm" : "mp4";
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `ember-video-${slug(asset.settings.prompt)}-${asset.id.slice(-6)}.${extension}`;
   document.body.appendChild(a);
   a.click();
   a.remove();

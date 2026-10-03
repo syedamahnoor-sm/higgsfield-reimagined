@@ -1,11 +1,11 @@
 "use client";
 
 import { useRouter, usePathname } from "next/navigation";
-import { Download, Heart, Loader2, RotateCcw, SlidersHorizontal } from "lucide-react";
+import { Download, Heart, Images, Loader2, RotateCcw, SlidersHorizontal } from "lucide-react";
 import { useState, useSyncExternalStore } from "react";
 import { IconButton } from "@/components/ui/IconButton";
 import { Tooltip } from "@/components/ui/Tooltip";
-import { remixAsset } from "@/lib/actions";
+import { downloadWithFeedback, remixAsset } from "@/lib/actions";
 import { cn } from "@/lib/cn";
 import { resolveReferenceUrl } from "@/lib/generation/local-motion-engine";
 import { canExportMotion, exportMotion } from "@/lib/motion/export";
@@ -105,6 +105,57 @@ export function MotionActionBar({ asset, onReplay }: { asset: Asset; onReplay: (
           </button>
         </Tooltip>
       )}
+      <span aria-hidden="true" className="mx-1 h-5 w-px bg-line-strong" />
+      <Tooltip label={asset.favorite ? "Remove from favorites" : "Add to favorites"} align="end">
+        <IconButton
+          aria-label="Favorite"
+          aria-pressed={asset.favorite}
+          size="sm"
+          onClick={a.favorite}
+          className={cn(asset.favorite && "text-accent! hover:text-accent!")}
+        >
+          <Heart aria-hidden="true" className={cn("size-4", asset.favorite && "fill-current")} />
+        </IconButton>
+      </Tooltip>
+    </div>
+  );
+}
+
+/** Actions for a real AI video: download the file, favorite, reuse settings, or open the Library. */
+export function AiVideoActionBar({ asset }: { asset: Asset }) {
+  const router = useRouter();
+  const a = useMotionActions(asset);
+  const [downloading, setDownloading] = useState(false);
+  const button =
+    "flex h-9 items-center gap-2 rounded-chip px-3 text-[13px] font-medium text-fg-muted transition-colors duration-150 hover:bg-surface-3 hover:text-fg disabled:opacity-60";
+  return (
+    <div role="toolbar" aria-label="Video actions" className="flex items-center justify-center gap-0.5">
+      <Tooltip label="Download this video">
+        <button
+          type="button"
+          aria-label="Download"
+          disabled={downloading}
+          onClick={async () => {
+            setDownloading(true);
+            await downloadWithFeedback(asset);
+            setDownloading(false);
+          }}
+          className={button}
+        >
+          {downloading ? <Loader2 aria-hidden="true" className="size-4 animate-spin" /> : <Download aria-hidden="true" className="size-4" />}
+          <span className="hidden sm:inline">Download</span>
+        </button>
+      </Tooltip>
+      <Tooltip label="Load this prompt and settings into the composer">
+        <button type="button" onClick={a.adjust} aria-label="Reuse settings" className={button}>
+          <SlidersHorizontal aria-hidden="true" className="size-4" /> <span className="hidden sm:inline">Reuse settings</span>
+        </button>
+      </Tooltip>
+      <Tooltip label="See it with the rest of your work">
+        <button type="button" onClick={() => router.push("/library")} aria-label="Open in Library" className={button}>
+          <Images aria-hidden="true" className="size-4" /> <span className="hidden sm:inline">Open in Library</span>
+        </button>
+      </Tooltip>
       <span aria-hidden="true" className="mx-1 h-5 w-px bg-line-strong" />
       <Tooltip label={asset.favorite ? "Remove from favorites" : "Add to favorites"} align="end">
         <IconButton

@@ -35,11 +35,11 @@ export async function resolveReferenceUrl(reference: MediaReference) {
  */
 export const localMotionEngine: GenerationEngine = {
   id: "local-motion",
-  label: "Local motion",
+  label: "Motion Preview",
   description:
-    "Animates your source image in the browser with a camera-motion preset. It moves the camera over the image; it doesn't generate new video frames with AI.",
+    "Motion Preview animates your image in the browser with a camera move over it. It isn't AI-generated video.",
 
-  resolveModel: ({ motion }) => `Local motion · ${presetLabel(motion)}`,
+  resolveModel: ({ motion }) => `Motion Preview · ${presetLabel(motion)}`,
 
   async generate({ settings, onProgress, signal }: GenerationRequest): Promise<GenerationResult> {
     const reference = settings.reference;
@@ -69,7 +69,7 @@ export const localMotionEngine: GenerationEngine = {
     const crop = centerCrop(image.naturalWidth, image.naturalHeight, aspectValue(settings.aspect));
     const scale = Math.min(1, MAX_EDGE / Math.max(crop.sw, crop.sh));
     return {
-      resolvedModel: `Local motion · ${presetLabel(settings.motion)}`,
+      resolvedModel: `Motion Preview · ${presetLabel(settings.motion)}`,
       media: [
         {
           // Uploads have no stable URL; the player resolves them from IndexedDB via settings.reference.

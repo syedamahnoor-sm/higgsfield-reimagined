@@ -27,8 +27,8 @@ export function SourcePicker() {
         <p className="font-mono text-2xs tracking-[0.14em] text-fg-subtle uppercase">Image to motion</p>
         <h2 className="mt-1.5 text-lg font-semibold tracking-[-0.02em] text-fg sm:text-xl">Choose an image to animate</h2>
         <p className="mt-1.5 max-w-lg text-[13px] leading-relaxed text-fg-muted">
-          Pick a camera move and Ember animates your image right here in the browser. It moves the camera over your image; it
-          doesn’t invent new frames.
+          Generate a real AI video from your image, or make a quick Motion Preview: a camera move over your image, rendered
+          in the browser.
         </p>
 
         <div

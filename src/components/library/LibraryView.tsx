@@ -12,7 +12,8 @@ import { FilterChips } from "@/components/ui/FilterChips";
 import { cn } from "@/lib/cn";
 import { INTENTS } from "@/lib/constants";
 import { findExploreItem } from "@/lib/explore";
-import { MotionCard, MotionDetails } from "./MotionLibrary";
+import { AiVideoCard, AiVideoDetails, MotionCard, MotionDetails } from "./MotionLibrary";
+import { VideoFilePlayer } from "@/components/motion/VideoFilePlayer";
 import { ReferenceRow } from "@/components/media/ReferenceRow";
 import { MotionPlayer } from "@/components/motion/MotionPlayer";
 import type { Asset, LibraryFilter } from "@/lib/types";
@@ -129,7 +130,7 @@ export function AssetViewer({
 
   return (
     <MediaViewer
-      label={open ? (open.renderer === "motion" ? "Motion clip" : "Library item") : "Library"}
+      label={open ? (open.renderer === "motion" ? "Motion Preview" : open.renderer === "file" ? "AI video" : "Library item") : "Library"}
       media={
         open && {
           key: open.id,
@@ -137,7 +138,9 @@ export function AssetViewer({
           alt: open.settings.prompt,
           aspect: open.width / open.height,
           node:
-            open.renderer === "motion" ? (
+            open.renderer === "file" ? (
+              <VideoFilePlayer src={open.url} mode="controls" />
+            ) : open.renderer === "motion" ? (
               <MotionPlayer
                 source={open.settings.reference}
                 preset={open.settings.motion ?? "push-in"}
@@ -153,7 +156,9 @@ export function AssetViewer({
       onNext={openIndex >= 0 && assets.length > 1 ? () => step(1) : undefined}
       details={
         open &&
-        (open.renderer === "motion" ? (
+        (open.renderer === "file" ? (
+          <AiVideoDetails asset={open} />
+        ) : open.renderer === "motion" ? (
           <MotionDetails asset={open} onReplay={() => setReplayKey((k) => k + 1)} />
         ) : (
           <AssetDetails asset={open} />
@@ -207,6 +212,7 @@ function FilteredEmpty({ filter }: { filter: LibraryFilter }) {
 
 function LibraryCard({ asset, preload, onOpen }: { asset: Asset; preload: boolean; onOpen: () => void }) {
   if (asset.renderer === "motion") return <MotionCard asset={asset} onOpen={onOpen} />;
+  if (asset.renderer === "file") return <AiVideoCard asset={asset} onOpen={onOpen} />;
   return (
     <MediaCard
       src={asset.url}

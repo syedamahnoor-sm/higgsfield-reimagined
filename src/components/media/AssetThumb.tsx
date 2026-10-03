@@ -5,13 +5,13 @@ import type { Asset } from "@/lib/types";
 import { MediaImage } from "./MediaImage";
 
 /**
- * Static thumbnail for any asset. Motion clips made from an upload have no
- * media URL of their own, so their source image is used.
+ * Static thumbnail for any asset. Video assets (motion clips without a URL of
+ * their own, and AI video files) use their source image as the still.
  */
 export function AssetThumb({ asset, sizes }: { asset: Asset; sizes: string }) {
   const reference = asset.settings.reference;
   const src =
-    asset.url ||
+    (asset.renderer !== "file" && asset.url) ||
     (reference ? (reference.source === "asset" ? reference.url : `${LOCAL_MEDIA_PREFIX}${reference.id}`) : "");
   if (!src) return <span className="shimmer block size-full" />;
   return <MediaImage src={src} alt="" sizes={sizes} className="object-cover" />;

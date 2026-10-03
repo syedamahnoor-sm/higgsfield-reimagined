@@ -79,7 +79,7 @@ function FilmstripItem({ job, active, compact, onSelect }: { job: Job; active: b
         <>
           <span className="shimmer absolute inset-0" />
           <span className="absolute inset-x-1.5 bottom-1.5 h-0.5 overflow-hidden rounded-full bg-white/10">
-            <span className="block h-full bg-accent transition-[width] duration-300" style={{ width: `${Math.round(job.progress * 100)}%` }} />
+            <span className="block h-full bg-accent transition-[width] duration-300" style={{ width: `${Math.round(Math.max(0, job.progress) * 100)}%` }} />
           </span>
         </>
       )}

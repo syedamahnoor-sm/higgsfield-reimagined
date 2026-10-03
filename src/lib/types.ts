@@ -17,7 +17,15 @@ export type ImageCount = 1 | 2 | 4;
 
 export type MotionPreset = "push-in" | "pull-out" | "pan" | "orbit" | "drift" | "handheld";
 
-export type VideoDuration = 5 | 10;
+export type VideoDuration = 3 | 5 | 10;
+
+/** How a video is made: real AI image-to-video, or the in-browser camera-move preview. */
+export type VideoEngineKind = "ai" | "motion";
+
+export type VideoResolution = "480p" | "580p" | "720p";
+
+/** AI video camera presets; "none" sends the creator's description only. */
+export type AiCameraPreset = "none" | "push-in" | "pull-back" | "pan-left" | "pan-right" | "static" | "orbit";
 
 /**
  * A reference image used as input for a generation.
@@ -42,6 +50,12 @@ export interface GenSettings {
   motion?: MotionPreset;
   /** Video only, in seconds. */
   duration?: VideoDuration;
+  /** Video only: AI video or Motion Preview. Undefined means Motion Preview (older drafts/assets). */
+  videoEngine?: VideoEngineKind;
+  /** AI video only. */
+  resolution?: VideoResolution;
+  /** AI video only: camera move turned into explicit camera wording on the server. */
+  camera?: AiCameraPreset;
 }
 
 export interface Asset {
@@ -67,7 +81,7 @@ export interface Asset {
   /**
    * How the asset is displayed. "image" (default) shows `url`; "motion" is a
    * browser-motion clip reconstructed from `settings.reference` + motion
-   * settings; "file" would be a real video file from a future provider.
+   * settings; "file" is a real video file (AI video), stored locally.
    */
   renderer?: AssetRenderer;
   /** Underlying model, for subtle display in details only (e.g. "FLUX.2 Turbo"). */

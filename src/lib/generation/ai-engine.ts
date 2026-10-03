@@ -1,6 +1,6 @@
 import { averageColor } from "@/lib/color";
 import { INTENTS } from "@/lib/constants";
-import { saveGeneratedImage } from "@/lib/media/uploads";
+import { saveLocalMedia } from "@/lib/media/uploads";
 import type { Intent } from "@/lib/types";
 import type { GeneratedMedia, GenerationEngine, GenerationRequest, GenerationResult } from "./engine";
 import { localEngine } from "./local-engine";
@@ -101,7 +101,7 @@ export const aiImageEngine: GenerationEngine = {
       const media: GeneratedMedia[] = await Promise.all(
         json.images.map(async (img) => {
           const blob = base64ToBlob(img.data, img.contentType);
-          return { url: await saveGeneratedImage(blob), width: img.width, height: img.height, color: await colorOf(blob) };
+          return { url: await saveLocalMedia(blob), width: img.width, height: img.height, color: await colorOf(blob) };
         }),
       );
       onProgress?.(1, "Finishing result");

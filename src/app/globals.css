@@ -135,6 +135,10 @@
   from { transform: translateX(0); }
   to { transform: translateX(-50%); }
 }
+@keyframes indeterminate {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(300%); }
+}
 @keyframes caret-blink {
   0%, 45% { opacity: 1; }
   50%, 95% { opacity: 0; }

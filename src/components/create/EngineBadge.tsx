@@ -6,6 +6,8 @@ import { Tooltip } from "@/components/ui/Tooltip";
 import { getEngine } from "@/lib/generation";
 import { checkAiAvailability } from "@/lib/generation/ai-engine";
 import { localEngine } from "@/lib/generation/local-engine";
+import { effectiveVideoEngine, useAiVideoAvailable } from "./video/VideoComposer";
+import { useStudio } from "@/store/studio";
 
 /** Always-visible, honest indicator of what is producing results in the current mode. */
 export function EngineBadge() {
@@ -24,7 +26,14 @@ export function EngineBadge() {
   }, []);
 
   // If AI generation isn't configured, Image results come from the local preview engine: say so.
-  const engine = video ? getEngine("video") : aiAvailable === false ? localEngine : getEngine("image");
+  const videoDraft = useStudio((s) => s.drafts.video);
+  const aiVideoAvailable = useAiVideoAvailable();
+  // Video: the engine the current draft will really use (AI video, or Motion Preview).
+  const engine = video
+    ? getEngine("video", { videoEngine: effectiveVideoEngine(videoDraft, aiVideoAvailable) })
+    : aiAvailable === false
+      ? localEngine
+      : getEngine("image");
   return (
     <Tooltip label={engine.description} side="bottom" align="end">
       <span
