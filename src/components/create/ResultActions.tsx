@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { Clapperboard, Download, Heart, ImageUp, Loader2, Shuffle } from "lucide-react";
 import { useState } from "react";
 import { IconButton } from "@/components/ui/IconButton";
@@ -17,13 +17,28 @@ export const ACTION_COPY = {
   download: { label: "Download", hint: "Download this image" },
 } as const;
 
-function useResultActions(asset: Asset) {
+/**
+ * The single implementation of every asset action, shared by Create, Library
+ * and the viewer. Remix and Use as reference land in the Image workspace, so
+ * from any other page they navigate there.
+ */
+export function useAssetActions(asset: Asset) {
   const router = useRouter();
+  const pathname = usePathname();
   const toggleFavorite = useStudio((s) => s.toggleFavorite);
   const [downloading, setDownloading] = useState(false);
+  const toImage = () => {
+    if (pathname !== "/create/image") router.push("/create/image");
+  };
   return {
-    remix: () => remixAsset(asset),
-    reference: () => setAssetAsReference(asset),
+    remix: () => {
+      remixAsset(asset);
+      toImage();
+    },
+    reference: () => {
+      setAssetAsReference(asset);
+      toImage();
+    },
     animate: () => {
       prepareAnimate(asset);
       router.push("/create/video");
@@ -57,7 +72,7 @@ export function FavoriteButton({
         variant={variant}
         size="sm"
         onClick={onToggle}
-        className={cn(asset.favorite && "text-accent hover:text-accent")}
+        className={cn(asset.favorite && "text-accent! hover:text-accent!")}
       >
         <Heart
           aria-hidden="true"
@@ -70,7 +85,7 @@ export function FavoriteButton({
 
 /** Persistent, labeled action bar shown beneath a single, focused result. */
 export function ResultActionBar({ asset }: { asset: Asset }) {
-  const a = useResultActions(asset);
+  const a = useAssetActions(asset);
   const button =
     "flex h-9 items-center gap-2 rounded-chip px-3 text-[13px] font-medium text-fg-muted transition-colors duration-150 hover:bg-surface-3 hover:text-fg";
   return (
@@ -104,7 +119,7 @@ export function ResultActionBar({ asset }: { asset: Asset }) {
 
 /** Compact overlay actions for a tile in a multi-image grid; shown on hover or keyboard focus. */
 export function TileActions({ asset }: { asset: Asset }) {
-  const a = useResultActions(asset);
+  const a = useAssetActions(asset);
   return (
     <>
       <div className="absolute top-2 right-2 flex gap-1">

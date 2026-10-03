@@ -270,7 +270,7 @@ function FailedState({ job }: { job: Job }) {
           <RotateCcw aria-hidden="true" className="size-4" />
           Try again
         </Button>
-        <Button variant="secondary" onClick={focusPrompt}>
+        <Button variant="secondary" onClick={() => focusPrompt()}>
           <PenLine aria-hidden="true" className="size-4" />
           Edit prompt
         </Button>

@@ -14,11 +14,17 @@ import { toast } from "@/store/toasts";
 
 export const PROMPT_INPUT_ID = "composer-prompt";
 
-export function focusPrompt() {
-  // Wait a frame so a just-updated textarea has rendered its new value.
+/**
+ * Focuses the composer prompt. Retries for a short while so it also works
+ * right after navigating to /create/image from another page.
+ */
+export function focusPrompt(attemptsLeft = 90) {
   requestAnimationFrame(() => {
     const el = document.getElementById(PROMPT_INPUT_ID) as HTMLTextAreaElement | null;
-    if (!el) return;
+    if (!el) {
+      if (attemptsLeft > 0) focusPrompt(attemptsLeft - 1);
+      return;
+    }
     el.focus();
     el.setSelectionRange(el.value.length, el.value.length);
   });

@@ -1,8 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { AlertTriangle, Plus } from "lucide-react";
-import { Tooltip } from "@/components/ui/Tooltip";
+import { AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/cn";
 import type { Job } from "@/lib/types";
 import { useSession } from "@/store/session";
@@ -15,7 +14,6 @@ import { useStudio } from "@/store/studio";
 export function Filmstrip({ orientation, className }: { orientation: "vertical" | "horizontal"; className?: string }) {
   const session = useSession((s) => s.sessions.image);
   const showJob = useSession((s) => s.showJob);
-  const showStart = useSession((s) => s.showStart);
   const jobs = useStudio((s) => s.jobs);
   const items = session.jobIds.map((id) => jobs[id]).filter(Boolean);
 
@@ -31,31 +29,8 @@ export function Filmstrip({ orientation, className }: { orientation: "vertical" 
         className,
       )}
     >
-      <div
-        className={cn(
-          "flex gap-2",
-          vertical ? "h-full flex-col items-center overflow-y-auto px-3 py-3" : "items-center overflow-x-auto px-3 py-2.5",
-        )}
-      >
-        <Tooltip label="Back to examples" side={vertical ? "left" : "bottom"}>
-          <button
-            type="button"
-            onClick={() => showStart("image")}
-            aria-label="Back to examples"
-            aria-current={session.activeJobId === null ? "true" : undefined}
-            className={cn(
-              "grid size-14 shrink-0 place-items-center rounded-card border border-dashed text-fg-subtle transition-colors duration-150 hover:border-line-strong hover:text-fg",
-              session.activeJobId === null ? "border-accent/60 text-accent" : "border-line-strong",
-              !vertical && "size-12",
-            )}
-          >
-            <Plus aria-hidden="true" className="size-4" />
-          </button>
-        </Tooltip>
-
-        {vertical && <span aria-hidden="true" className="my-0.5 h-px w-8 shrink-0 bg-line" />}
-
-        <ol className={cn("flex gap-2", vertical ? "flex-col" : "flex-row")}>
+      <div className={cn(vertical ? "h-full overflow-y-auto px-3 py-3" : "overflow-x-auto px-3 py-2.5")}>
+        <ol className={cn("flex gap-2", vertical ? "flex-col items-center" : "flex-row")}>
           {items.map((job) => (
             <li key={job.id}>
               <FilmstripItem
