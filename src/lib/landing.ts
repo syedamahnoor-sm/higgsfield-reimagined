@@ -22,7 +22,7 @@ export const SHOWCASE_SCENES: ShowcaseScene[] = [
   {
     id: "skyline",
     prompt: "A cinematic city skyline at blue hour, dramatic clouds",
-    style: "Photoreal",
+    style: "Cinematic",
     preset: "push-in",
     presetLabel: "Push in",
     source: poolReference("p857"),
@@ -30,7 +30,7 @@ export const SHOWCASE_SCENES: ShowcaseScene[] = [
   {
     id: "aurora",
     prompt: "Northern lights over a lone pine, long exposure",
-    style: "Auto",
+    style: "Cinematic · Dreamy Glow",
     preset: "drift",
     presetLabel: "Drift",
     source: poolReference("p1022"),
@@ -38,7 +38,7 @@ export const SHOWCASE_SCENES: ShowcaseScene[] = [
   {
     id: "lioness",
     prompt: "Close portrait of a lioness, intense gaze, dark mood",
-    style: "Photoreal",
+    style: "Portrait",
     preset: "orbit",
     presetLabel: "Orbit",
     source: poolReference("p1074"),

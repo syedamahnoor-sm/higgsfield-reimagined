@@ -9,7 +9,15 @@ import { getEngine } from "./index";
  * so they keep running and land in the session/Library even if the user
  * navigates away mid-generation.
  */
-export async function startGeneration(input: GenSettings) {
+export interface StartOptions {
+  /** Lineage override (e.g. the image being edited); defaults to the draft's parent. */
+  parentId?: string;
+  /** Join an existing generation set (Regenerate / Variations / Edit). */
+  setId?: string;
+  origin?: Job["origin"];
+}
+
+export async function startGeneration(input: GenSettings, options: StartOptions = {}) {
   const engine = getEngine(input.mode, input);
   const studio = useStudio.getState();
   const settings: GenSettings = structuredClone({ ...input, prompt: input.prompt.trim() });
@@ -20,9 +28,12 @@ export async function startGeneration(input: GenSettings) {
     progress: 0,
     assetIds: [],
     engineId: engine.id,
-    parentId: studio.draftParents[settings.mode],
+    parentId: options.parentId ?? studio.draftParents[settings.mode],
+    setId: options.setId,
+    origin: options.origin ?? "generate",
     createdAt: Date.now(),
   };
+  if (!job.setId) job.setId = job.id;
   studio.addJob(job);
   useSession.getState().addJob(settings.mode, job.id);
 
@@ -49,6 +60,7 @@ export async function startGeneration(input: GenSettings) {
       attribution: m.attribution,
       renderer: m.renderer,
       modelLabel: result.modelLabel,
+      seed: m.seed,
     }));
     useStudio.getState().completeJob(
       job.id,
@@ -70,5 +82,5 @@ export function retryJob(jobId: string) {
   const job = useStudio.getState().jobs[jobId];
   if (!job) return;
   useSession.getState().removeJob(job.settings.mode, jobId);
-  void startGeneration(job.settings);
+  void startGeneration(job.settings, { parentId: job.parentId, setId: job.setId === job.id ? undefined : job.setId, origin: job.origin });
 }

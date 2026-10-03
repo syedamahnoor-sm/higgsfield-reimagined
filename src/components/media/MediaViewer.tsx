@@ -153,10 +153,10 @@ export function MetaList({ rows }: { rows: { label: string; value: ReactNode }[]
 }
 
 /** Prompt block shared by Explore and Library details. */
-export function PromptBlock({ prompt }: { prompt: string }) {
+export function PromptBlock({ prompt, label = "Prompt" }: { prompt: string; label?: string }) {
   return (
     <div>
-      <p className="font-mono text-2xs tracking-[0.12em] text-fg-subtle uppercase">Prompt</p>
+      <p className="font-mono text-2xs tracking-[0.12em] text-fg-subtle uppercase">{label}</p>
       <p className="mt-2 text-[15px] leading-relaxed text-fg">{prompt}</p>
     </div>
   );

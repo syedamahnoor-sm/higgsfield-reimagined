@@ -1,15 +1,17 @@
 "use client";
 
 import { motion } from "motion/react";
-import { AlertTriangle, ArrowLeft, Cpu, Info, PenLine, RotateCcw } from "lucide-react";
+import { AlertTriangle, ArrowLeft, ChevronLeft, ChevronRight, Cpu, Info, Layers, PenLine, RefreshCw, RotateCcw } from "lucide-react";
 import { useEffect, useRef } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { MediaImage } from "@/components/media/MediaImage";
 import { Button } from "@/components/ui/Button";
-import { focusPrompt } from "@/lib/actions";
+import { IconButton } from "@/components/ui/IconButton";
+import { Tooltip } from "@/components/ui/Tooltip";
+import { focusPrompt, regenerateJob, variationsOf } from "@/lib/actions";
+import { directionLabel, engineDisplay, lookLabel, qualityLabel, qualityOf } from "@/lib/creative";
 import { aspectValue, fitGrid } from "@/lib/aspect";
 import { cn } from "@/lib/cn";
-import { INTENTS } from "@/lib/constants";
 import { retryJob } from "@/lib/generation/run";
 import type { Asset, Job } from "@/lib/types";
 import { useElementSize } from "@/lib/useElementSize";
@@ -73,6 +75,7 @@ export function ResultStage({ job }: { job: Job }) {
                       width={grid.width}
                       height={grid.height}
                       expanded={single}
+                      setId={job.setId ?? job.id}
                       onExpand={() => focusAsset("image", asset.id)}
                     />
                   ) : (
@@ -82,7 +85,7 @@ export function ResultStage({ job }: { job: Job }) {
               </div>
               {single && (
                 <div className="flex h-[52px] items-end">
-                  <ResultActionBar asset={focused ?? assets[0]} />
+                  <ResultActionBar asset={focused ?? assets[0]} setId={job.setId ?? job.id} />
                 </div>
               )}
             </div>
@@ -94,22 +97,31 @@ export function ResultStage({ job }: { job: Job }) {
 }
 
 function ResultHeader({ job, focusedIndex, total, onBack }: { job: Job; focusedIndex: number; total: number; onBack: () => void }) {
-  const intent = INTENTS.find((i) => i.id === job.settings.intent)?.label;
   const time = new Date(job.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  const editing = job.settings.operation === "edit";
+  const meta: string[] = [];
+  if (!editing) {
+    meta.push(directionLabel(job.settings.direction));
+    if (job.settings.look && job.settings.look !== "none") meta.push(lookLabel(job.settings.look));
+  }
+  meta.push(job.settings.aspect, `×${editing ? 1 : job.settings.count}`, qualityLabel(qualityOf(job.settings)));
 
   return (
-    <div className="flex items-start justify-between gap-4 px-4 pt-4 pb-3 sm:px-6">
-      <div className="min-w-0">
-        <p className="line-clamp-2 max-w-3xl text-[13px] leading-relaxed text-fg sm:text-sm">{job.settings.prompt}</p>
+    <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2 px-4 pt-4 pb-3 sm:px-6">
+      <div className="min-w-0 flex-1">
+        <p className="line-clamp-2 max-w-3xl text-[13px] leading-relaxed text-fg sm:text-sm">
+          {editing && <span className="mr-1.5 rounded-[5px] bg-accent-soft px-1.5 py-0.5 font-mono text-2xs text-accent">Edit</span>}
+          {job.settings.prompt}
+        </p>
         <div className="mt-1.5 flex flex-wrap items-center gap-x-2.5 gap-y-1 font-mono text-2xs text-fg-subtle">
           <JobStatusLabel job={job} />
-          <span aria-hidden="true">·</span>
-          <span>{job.settings.aspect}</span>
-          <span aria-hidden="true">·</span>
-          <span>{intent}</span>
-          <span aria-hidden="true">·</span>
-          <span>×{job.settings.count}</span>
-          {job.settings.reference && (
+          {meta.map((m) => (
+            <span key={m} className="flex items-center gap-2.5">
+              <span aria-hidden="true">·</span>
+              {m}
+            </span>
+          ))}
+          {job.settings.reference && !editing && (
             <>
               <span aria-hidden="true">·</span>
               <span>with reference</span>
@@ -127,20 +139,80 @@ function ResultHeader({ job, focusedIndex, total, onBack }: { job: Job; focusedI
           </p>
         )}
       </div>
-      {focusedIndex >= 0 && total > 1 && (
-        <button
-          type="button"
-          onClick={onBack}
-          className="flex h-8 shrink-0 items-center gap-1.5 rounded-chip border border-line px-2.5 text-xs font-medium text-fg-muted transition-colors hover:border-line-strong hover:text-fg"
-        >
-          <ArrowLeft aria-hidden="true" className="size-3.5" />
-          All {total}
-          <span className="font-mono text-fg-subtle">
-            {focusedIndex + 1}/{total}
-          </span>
-        </button>
-      )}
+      <div className="flex shrink-0 flex-wrap items-center gap-1.5">
+        {focusedIndex >= 0 && total > 1 && (
+          <button
+            type="button"
+            onClick={onBack}
+            className="flex h-8 shrink-0 items-center gap-1.5 rounded-chip border border-line px-2.5 text-xs font-medium text-fg-muted transition-colors hover:border-line-strong hover:text-fg"
+          >
+            <ArrowLeft aria-hidden="true" className="size-3.5" />
+            All {total}
+            <span className="font-mono text-fg-subtle">
+              {focusedIndex + 1}/{total}
+            </span>
+          </button>
+        )}
+        <SetControls job={job} />
+      </div>
     </div>
+  );
+}
+
+/**
+ * Generation set controls: move between versions, and make more. Regenerate
+ * reruns the same settings with a new seed; Variations makes two more takes
+ * from the same prompt and settings (independent generations, not image-based).
+ */
+function SetControls({ job }: { job: Job }) {
+  const setId = job.setId ?? job.id;
+  const versions = useStudio(
+    useShallow((s) =>
+      Object.values(s.jobs)
+        .filter((j) => (j.setId ?? j.id) === setId && j.settings.mode === "image")
+        .sort((a, b) => a.createdAt - b.createdAt)
+        .map((j) => j.id),
+    ),
+  );
+  const busy = useStudio((s) => Object.values(s.jobs).some((j) => j.settings.mode === "image" && (j.status === "queued" || j.status === "running")));
+  const showJob = useSession((s) => s.showJob);
+  const index = versions.indexOf(job.id);
+  const canMake = job.status === "done" || job.status === "failed";
+  const pill =
+    "flex h-8 items-center gap-1.5 rounded-chip border border-line px-2.5 text-xs font-medium text-fg-muted transition-colors hover:border-line-strong hover:text-fg disabled:opacity-40 disabled:hover:border-line disabled:hover:text-fg-muted";
+
+  return (
+    <>
+      {versions.length > 1 && (
+        <div className="flex h-8 items-center rounded-chip border border-line" role="group" aria-label="Versions">
+          <IconButton aria-label="Previous version" size="sm" disabled={index <= 0} onClick={() => showJob("image", versions[index - 1])}>
+            <ChevronLeft aria-hidden="true" className="size-4" />
+          </IconButton>
+          <span className="px-1 font-mono text-2xs text-fg-muted" aria-live="polite">
+            v{index + 1} / {versions.length}
+          </span>
+          <IconButton aria-label="Next version" size="sm" disabled={index >= versions.length - 1} onClick={() => showJob("image", versions[index + 1])}>
+            <ChevronRight aria-hidden="true" className="size-4" />
+          </IconButton>
+        </div>
+      )}
+      {job.settings.operation !== "edit" && (
+        <>
+          <Tooltip label="Run the same settings again with a new seed" align="end">
+            <button type="button" className={pill} disabled={!canMake || busy} onClick={() => void regenerateJob(job)}>
+              <RefreshCw aria-hidden="true" className="size-3.5" />
+              <span className="hidden sm:inline">Regenerate</span>
+            </button>
+          </Tooltip>
+          <Tooltip label="Two more takes from the same prompt and settings" align="end">
+            <button type="button" className={pill} disabled={!canMake || busy} onClick={() => void variationsOf(job)}>
+              <Layers aria-hidden="true" className="size-3.5" />
+              <span className="hidden sm:inline">Variations</span>
+            </button>
+          </Tooltip>
+        </>
+      )}
+    </>
   );
 }
 
@@ -160,7 +232,7 @@ function JobStatusLabel({ job }: { job: Job }) {
   return (
     <span className="flex items-center gap-1.5 text-fg-muted">
       <Cpu aria-hidden="true" className="size-3" />
-      {job.resolvedModel}
+      {engineDisplay(job.resolvedModel, job.settings.operation)}
     </span>
   );
 }
@@ -189,6 +261,7 @@ function ResultTile({
   width,
   height,
   expanded,
+  setId,
   onExpand,
 }: {
   asset: Asset;
@@ -196,6 +269,7 @@ function ResultTile({
   width: number;
   height: number;
   expanded: boolean;
+  setId: string;
   onExpand: () => void;
 }) {
   return (
@@ -234,7 +308,7 @@ function ResultTile({
             : "opacity-0 group-focus-within:opacity-100 group-hover:opacity-100 [@media(hover:none)]:opacity-100",
         )}
       >
-        {!expanded && <TileActions asset={asset} />}
+        {!expanded && <TileActions asset={asset} setId={setId} />}
         {asset.attribution && (expanded || width >= 300) && (
           <a
             href={asset.attribution.url}

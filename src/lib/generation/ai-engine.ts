@@ -1,7 +1,9 @@
 import { averageColor } from "@/lib/color";
-import { INTENTS } from "@/lib/constants";
+import { qualityOf } from "@/lib/creative";
 import { saveLocalMedia } from "@/lib/media/uploads";
-import type { Intent } from "@/lib/types";
+import { loadImage } from "@/lib/motion/presets";
+import { resolveReferenceUrl } from "./local-motion-engine";
+import type { GenSettings, MediaReference } from "@/lib/types";
 import type { GeneratedMedia, GenerationEngine, GenerationRequest, GenerationResult } from "./engine";
 import { localEngine } from "./local-engine";
 
@@ -13,19 +15,44 @@ import { localEngine } from "./local-engine";
 
 const CLIENT_TIMEOUT_MS = 55_000;
 export const AI_FALLBACK_NOTE = "AI generation unavailable, so this is a local preview instead.";
-const REFERENCE_NOTE = "Reference images aren't used by AI generation yet.";
+/** The model requires input images smaller than 512x512. */
+const INPUT_IMAGE_EDGE = 504;
 
 interface ApiImage {
   data: string;
   contentType: string;
   width: number;
   height: number;
+  seed?: number;
 }
 
 class AiUnavailable extends Error {}
 
-function intentLabel(intent: Intent) {
-  return INTENTS.find((i) => i.id === intent)?.label ?? "Auto";
+/** Engine label; Direction and Look are shown separately next to it. */
+export function aiLabel(settings: Partial<GenSettings>) {
+  return settings.operation === "edit" ? "AI edit" : "AI generation";
+}
+
+/** Reference / edit source as a small JPEG within the model's input-size limit. */
+async function inputImageFor(reference: MediaReference) {
+  const src = await resolveReferenceUrl(reference);
+  if (!src) throw new AiUnavailable();
+  const img = await loadImage(src);
+  const scale = Math.min(1, INPUT_IMAGE_EDGE / Math.max(img.naturalWidth, img.naturalHeight));
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.max(1, Math.round(img.naturalWidth * scale));
+  canvas.height = Math.max(1, Math.round(img.naturalHeight * scale));
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new AiUnavailable();
+  ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+  const dataUrl = canvas.toDataURL("image/jpeg", 0.9);
+  return { data: dataUrl.slice(dataUrl.indexOf(",") + 1), contentType: "image/jpeg" };
+}
+
+export class EditUnavailableError extends Error {
+  constructor() {
+    super("Editing needs AI generation, which isn't available right now. Your image is unchanged.");
+  }
 }
 
 function base64ToBlob(data: string, type: string) {
@@ -62,18 +89,22 @@ export const aiImageEngine: GenerationEngine = {
   description:
     "Creates new images from your prompt with an AI image model. Prompts are sent to our generation service. If it's unavailable, Ember shows a local preview instead.",
 
-  resolveModel: ({ intent }) => `AI generation · ${intentLabel(intent)}`,
+  resolveModel: (settings) => aiLabel(settings),
 
   async generate(request: GenerationRequest): Promise<GenerationResult> {
     const { settings, onProgress, signal } = request;
-    onProgress?.(0.04, "Preparing prompt");
+    const editing = settings.operation === "edit";
+    onProgress?.(0.04, editing ? "Preparing edit" : "Preparing prompt");
 
     // There is no streamed progress from the provider, so progress is an honest
     // estimate that eases toward 90% and never claims completion early.
     const started = performance.now();
     const ticker = setInterval(() => {
       const elapsed = (performance.now() - started) / 1000;
-      onProgress?.(Math.min(0.9, 0.08 + 0.82 * (1 - Math.exp(-elapsed / 4))), elapsed < 0.6 ? "Preparing prompt" : "Creating image");
+      onProgress?.(
+        Math.min(0.9, 0.08 + 0.82 * (1 - Math.exp(-elapsed / 4))),
+        elapsed < 0.6 ? (editing ? "Preparing edit" : "Preparing prompt") : editing ? "Editing image" : "Creating image",
+      );
     }, 200);
 
     const controller = new AbortController();
@@ -81,14 +112,21 @@ export const aiImageEngine: GenerationEngine = {
     signal?.addEventListener("abort", () => controller.abort());
 
     try {
+      // The reference (or edit source) is genuinely sent to the model as an input image.
+      const inputImage = settings.reference ? await inputImageFor(settings.reference) : undefined;
       const response = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           prompt: settings.prompt,
-          intent: settings.intent,
+          operation: editing ? "edit" : "generate",
+          direction: settings.direction ?? "auto",
+          look: settings.look ?? "none",
+          quality: qualityOf(settings),
           aspect: settings.aspect,
-          count: settings.count,
+          count: editing ? 1 : settings.count,
+          seed: settings.seed,
+          inputImage,
         }),
         signal: controller.signal,
       });
@@ -101,19 +139,21 @@ export const aiImageEngine: GenerationEngine = {
       const media: GeneratedMedia[] = await Promise.all(
         json.images.map(async (img) => {
           const blob = base64ToBlob(img.data, img.contentType);
-          return { url: await saveLocalMedia(blob), width: img.width, height: img.height, color: await colorOf(blob) };
+          return { url: await saveLocalMedia(blob), width: img.width, height: img.height, color: await colorOf(blob), seed: img.seed };
         }),
       );
       onProgress?.(1, "Finishing result");
       return {
         media,
-        resolvedModel: `AI generation · ${intentLabel(settings.intent)}`,
+        resolvedModel: aiLabel(settings),
         modelLabel: json.model,
-        note: settings.reference ? REFERENCE_NOTE : undefined,
+        note: !editing && settings.reference ? "Guided by your reference image." : undefined,
       };
     } catch (error) {
       clearInterval(ticker);
       if (signal?.aborted) throw error;
+      // An edit can't be faked with unrelated local photos: say so plainly instead.
+      if (editing) throw new EditUnavailableError();
       // Any failure (not configured, provider error, timeout, storage) → keep the creator moving.
       if (!(error instanceof AiUnavailable) && process.env.NODE_ENV !== "production") {
         console.warn("[ai-engine] falling back to local preview:", error instanceof Error ? error.name : "unknown");

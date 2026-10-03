@@ -1,6 +1,6 @@
 "use client";
 
-import { Clapperboard, Compass, Download, Heart, ImageUp, Images, Loader2, Shuffle, Sparkles } from "lucide-react";
+import { Bookmark, Clapperboard, Compass, Download, Heart, ImageUp, Images, Loader2, Shuffle, Sparkles } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { ACTION_COPY, TileActions, useAssetActions } from "@/components/create/ResultActions";
@@ -10,7 +10,10 @@ import { Button, ButtonLink } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { FilterChips } from "@/components/ui/FilterChips";
 import { cn } from "@/lib/cn";
-import { INTENTS } from "@/lib/constants";
+import { directionLabel, lookLabel, qualityLabel, qualityOf } from "@/lib/creative";
+import { SaveElementPopover } from "@/components/create/SaveElement";
+import { ElementsGrid } from "./ElementsGrid";
+import { elementNameFrom } from "@/lib/actions";
 import { findExploreItem } from "@/lib/explore";
 import { AiVideoCard, AiVideoDetails, MotionCard, MotionDetails } from "./MotionLibrary";
 import { VideoFilePlayer } from "@/components/motion/VideoFilePlayer";
@@ -32,6 +35,7 @@ function matches(asset: Asset, filter: LibraryFilter) {
 export function LibraryView() {
   const hydrated = useHydrated();
   const assets = useStudio(useShallow((s) => Object.values(s.assets)));
+  const elementCount = useStudio((s) => Object.keys(s.elements).length);
   const [filter, setFilter] = useState<LibraryFilter>("all");
   const [openId, setOpenId] = useState<string | null>(null);
 
@@ -43,13 +47,14 @@ export function LibraryView() {
       images: sorted.filter((a) => a.kind === "image").length,
       videos: sorted.filter((a) => a.kind === "video").length,
       favorites: sorted.filter((a) => a.favorite).length,
+      elements: elementCount,
     }),
-    [sorted],
+    [sorted, elementCount],
   );
 
   if (!hydrated) return <div className="min-h-[50dvh]" aria-busy="true" />;
 
-  if (sorted.length === 0) {
+  if (sorted.length === 0 && elementCount === 0) {
     return (
       <EmptyPanel>
         <EmptyState
@@ -85,11 +90,14 @@ export function LibraryView() {
             { id: "images", label: "Images", count: counts.images },
             { id: "videos", label: "Videos", count: counts.videos },
             { id: "favorites", label: "Favorites", count: counts.favorites },
+            { id: "elements", label: "Elements", count: counts.elements },
           ]}
         />
       </div>
 
-      {visible.length === 0 ? (
+      {filter === "elements" ? (
+        <ElementsGrid />
+      ) : visible.length === 0 ? (
         <FilteredEmpty filter={filter} />
       ) : (
         <ul className="columns-2 gap-3 md:columns-3 xl:columns-4 2xl:columns-5 [&>li]:mb-3">
@@ -243,7 +251,8 @@ function LibraryCard({ asset, preload, onOpen }: { asset: Asset; preload: boolea
 
 function AssetDetails({ asset }: { asset: Asset }) {
   const a = useAssetActions(asset);
-  const intent = INTENTS.find((i) => i.id === asset.settings.intent)?.label ?? asset.settings.intent;
+  const editing = asset.settings.operation === "edit";
+  const method = asset.attribution ? "Local preview" : editing ? "AI edit" : "AI generation";
   const created = new Date(asset.createdAt).toLocaleString([], { dateStyle: "medium", timeStyle: "short" });
   const parentExample = findExploreItem(asset.parentId);
   const parentAsset = useStudio((s) => (asset.parentId ? s.assets[asset.parentId] : undefined));
@@ -258,7 +267,7 @@ function AssetDetails({ asset }: { asset: Asset }) {
         <p className="font-mono text-2xs tracking-[0.14em] text-fg-subtle uppercase">{asset.kind === "video" ? "Video" : "Image"} · {created}</p>
       </div>
 
-      <PromptBlock prompt={asset.settings.prompt} />
+      <PromptBlock prompt={asset.settings.prompt} label={editing ? "Edit instruction" : "Prompt"} />
 
       <div className="flex flex-col gap-2">
         <Button variant="primary" size="lg" onClick={a.remix} className="w-full">
@@ -289,21 +298,41 @@ function AssetDetails({ asset }: { asset: Asset }) {
             {a.downloading ? <Loader2 aria-hidden="true" className="size-4 animate-spin" /> : <Download aria-hidden="true" className="size-4" />}
             {ACTION_COPY.download.label}
           </button>
+          {asset.kind === "image" && (
+            <SaveElementPopover
+              side="bottom"
+              align="start"
+              source={{ url: asset.url, width: asset.width, height: asset.height, color: asset.color, defaultName: elementNameFrom(asset.settings.prompt), sourceAssetId: asset.id }}
+              trigger={(props) => (
+                <button type="button" {...props} className={cn(secondary, "w-full")}>
+                  <Bookmark aria-hidden="true" className="size-4" />
+                  Save as Element
+                </button>
+              )}
+            />
+          )}
         </div>
       </div>
 
       <MetaList
         rows={[
-          { label: "Engine", value: asset.resolvedModel },
+          { label: "Method", value: method },
           ...(asset.modelLabel ? [{ label: "Model", value: asset.modelLabel }] : []),
-          { label: "Style", value: intent },
+          ...(!editing
+            ? [
+                { label: "Direction", value: directionLabel(asset.settings.direction) },
+                { label: "Look", value: lookLabel(asset.settings.look) },
+              ]
+            : []),
+          { label: "Quality", value: qualityLabel(qualityOf(asset.settings)) },
           { label: "Aspect ratio", value: asset.settings.aspect },
+          ...(asset.seed !== undefined ? [{ label: "Seed", value: String(asset.seed) }] : []),
           { label: "Size", value: `${asset.width}×${asset.height}` },
-          ...(lineage ? [{ label: "Based on", value: lineage }] : []),
+          ...(lineage ? [{ label: editing ? "Edited from" : "Based on", value: lineage }] : []),
         ]}
       />
 
-      {asset.settings.reference && <ReferenceRow asset={asset} />}
+      {asset.settings.reference && <ReferenceRow asset={asset} label={editing ? "Source image (edited)" : "Generated with a reference"} />}
 
       {asset.attribution && (
         <p className="text-xs text-fg-subtle">

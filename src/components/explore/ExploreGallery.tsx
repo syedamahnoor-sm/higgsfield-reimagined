@@ -11,15 +11,18 @@ import { Tooltip } from "@/components/ui/Tooltip";
 import { loadImageDraft } from "@/lib/actions";
 import { aspectValue } from "@/lib/aspect";
 import { cn } from "@/lib/cn";
-import { ASPECT_RATIOS, INTENTS } from "@/lib/constants";
+import { ASPECT_RATIOS } from "@/lib/constants";
+import { directionLabel, lookLabel } from "@/lib/creative";
 import { EXPLORE_CATEGORIES, EXPLORE_ITEMS, type ExploreCategory } from "@/lib/explore";
 
 type Item = (typeof EXPLORE_ITEMS)[number];
 
 const GRID_SIZES = "(min-width: 1536px) 20vw, (min-width: 1280px) 25vw, (min-width: 768px) 33vw, 50vw";
 
-function intentLabel(item: Item) {
-  return INTENTS.find((i) => i.id === item.settings.intent)?.label ?? item.settings.intent;
+/** "Cinematic · Noir": the example's direction plus its look, when it has one. */
+function styleLabel(item: Item) {
+  const look = item.settings.look && item.settings.look !== "none" ? ` · ${lookLabel(item.settings.look)}` : "";
+  return `${directionLabel(item.settings.direction)}${look}`;
 }
 
 /** Loads an example into the Image draft and opens Create. Never generates by itself. */
@@ -92,7 +95,7 @@ function ExploreCard({ item, preload, onOpen, onRemix }: { item: Item; preload: 
         <div className="min-w-0">
           <p className="truncate text-[13px] font-semibold text-white">{item.title}</p>
           <p className="mt-0.5 font-mono text-2xs text-white/60">
-            {intentLabel(item)} · {item.settings.aspect}
+            {styleLabel(item)} · {item.settings.aspect}
           </p>
         </div>
         <Tooltip label="Load this prompt and settings into Create" align="end">
@@ -121,7 +124,8 @@ function ExploreDetails({ item, onRemix }: { item: Item; onRemix: () => void }) 
       <PromptBlock prompt={item.settings.prompt} />
       <MetaList
         rows={[
-          { label: "Style", value: intentLabel(item) },
+          { label: "Direction", value: directionLabel(item.settings.direction) },
+          { label: "Look", value: lookLabel(item.settings.look) },
           { label: "Aspect ratio", value: `${item.settings.aspect}${aspect ? ` · ${aspect.label}` : ""}` },
           { label: "Images", value: `×${item.settings.count}` },
         ]}

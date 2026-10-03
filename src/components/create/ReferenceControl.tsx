@@ -1,33 +1,11 @@
 "use client";
 
 import Image from "next/image";
-import { ImageOff, ImagePlus, Loader2, RefreshCw, X } from "lucide-react";
+import { ImageOff, Loader2, RefreshCw, X } from "lucide-react";
 import { IconButton } from "@/components/ui/IconButton";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { useReferenceUrl } from "@/lib/media/useReferenceUrl";
 import type { MediaReference } from "@/lib/types";
-
-/** Button that opens the file picker when no reference is attached. */
-export function AddReferenceButton({ onPick, busy }: { onPick: () => void; busy: boolean }) {
-  return (
-    <Tooltip label="Add a reference image from your device. It stays in your browser.">
-      <button
-        type="button"
-        onClick={onPick}
-        disabled={busy}
-        aria-label="Add reference image"
-        className="flex h-9 items-center gap-1.5 rounded-chip px-2.5 text-[13px] font-medium text-fg-muted transition-colors duration-150 hover:bg-surface-3 hover:text-fg disabled:opacity-60"
-      >
-        {busy ? (
-          <Loader2 aria-hidden="true" className="size-4 animate-spin" />
-        ) : (
-          <ImagePlus aria-hidden="true" className="size-4" strokeWidth={1.75} />
-        )}
-        <span className="hidden sm:inline">Reference</span>
-      </button>
-    </Tooltip>
-  );
-}
 
 /** Attached reference: thumbnail, source, dimensions, replace and remove. */
 export function ReferenceChip({
@@ -36,8 +14,11 @@ export function ReferenceChip({
   onRemove,
   busy,
   label = "Reference",
+  actions,
 }: {
   label?: string;
+  /** Extra controls shown before Replace (e.g. Save as Element). */
+  actions?: React.ReactNode;
   reference: MediaReference;
   onReplace: () => void;
   onRemove: () => void;
@@ -65,6 +46,7 @@ export function ReferenceChip({
           {url === null ? "No longer available in this browser" : `${label} · ${reference.width}×${reference.height}`}
         </p>
       </div>
+      {actions}
       <Tooltip label={`Replace ${label.toLowerCase()}`}>
         <IconButton aria-label={`Replace ${label.toLowerCase()}`} size="sm" onClick={onReplace} disabled={busy}>
           {busy ? <Loader2 aria-hidden="true" className="size-4 animate-spin" /> : <RefreshCw aria-hidden="true" className="size-4" />}

@@ -1,5 +1,6 @@
 import { aspectValue, centerCrop } from "@/lib/aspect";
-import type { Intent } from "@/lib/types";
+import { qualityOf } from "@/lib/creative";
+import type { Direction, LookId, Quality } from "@/lib/types";
 import type { GenerationEngine, GenerationRequest, GenerationResult } from "./engine";
 import { pickImages, scorePool } from "./match";
 import { POOL } from "./pool-data";
@@ -13,10 +14,32 @@ interface Profile {
 }
 
 /** What each intent honestly means for the local engine: render time and output resolution. */
-const PROFILES: Record<Intent, Profile> = {
-  auto: { label: "Local preview · Balanced", duration: 4200, longEdge: 1600 },
-  photoreal: { label: "Local preview · Full detail", duration: 6000, longEdge: 1600 },
-  fast: { label: "Local preview · Draft", duration: 2200, longEdge: 1024 },
+const PROFILES: Record<Quality, Profile> = {
+  standard: { label: "Local preview", duration: 4200, longEdge: 1600 },
+  high: { label: "Local preview", duration: 6000, longEdge: 1600 },
+  draft: { label: "Local preview", duration: 2200, longEdge: 1024 },
+};
+
+/**
+ * The local set is real photography, so Direction and Look can only steer
+ * which photos match (e.g. Noir favours monochrome); they can't restyle them.
+ */
+const DIRECTION_TERMS: Record<Direction, string> = {
+  auto: "",
+  cinematic: "moody night dramatic",
+  editorial: "fashion architecture minimal",
+  portrait: "portrait woman man",
+  product: "still-life food vintage",
+  illustration: "",
+};
+const LOOK_TERMS: Record<LookId, string> = {
+  none: "",
+  "film-grain": "vintage",
+  "dreamy-glow": "mist dreamy",
+  "vintage-film": "vintage",
+  noir: "monochrome",
+  "neon-night": "night city lights",
+  "high-contrast": "dramatic",
 };
 
 /** Testing hook: a prompt containing this token fails partway through. */
@@ -48,10 +71,10 @@ export const localEngine: GenerationEngine = {
   description:
     "Matches your prompt, aspect ratio and reference colour against a curated set of licensed photographs. No external AI service is called.",
 
-  resolveModel: ({ intent }) => PROFILES[intent].label,
+  resolveModel: (settings) => PROFILES[qualityOf({ intent: settings.intent ?? "auto", quality: settings.quality })].label,
 
   async generate({ settings, onProgress, signal }: GenerationRequest): Promise<GenerationResult> {
-    const profile = PROFILES[settings.intent];
+    const profile = PROFILES[qualityOf(settings)];
     const aspect = aspectValue(settings.aspect);
 
     // Queue.
@@ -59,7 +82,12 @@ export const localEngine: GenerationEngine = {
     onProgress?.(0);
 
     const { picks, matched } = pickImages(
-      scorePool(POOL, settings.prompt, aspect, settings.reference?.color),
+      scorePool(
+        POOL,
+        [settings.prompt, DIRECTION_TERMS[settings.direction ?? "auto"], LOOK_TERMS[settings.look ?? "none"]].join(" "),
+        aspect,
+        settings.reference?.color,
+      ),
       settings.count,
     );
     const loading = Promise.all(picks.map((p) => preload(p.image.src)));

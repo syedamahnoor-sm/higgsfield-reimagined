@@ -18,6 +18,8 @@ export interface GeneratedMedia {
   attribution?: Attribution;
   /** Defaults to "image". */
   renderer?: AssetRenderer;
+  /** Seed used by the provider, when known. */
+  seed?: number;
 }
 
 export interface GenerationResult {
@@ -48,6 +50,6 @@ export interface GenerationEngine {
   /** One-sentence plain-language explanation of what this engine actually does. */
   description: string;
   /** What the engine resolves to for these settings, so the UI can show it before generating. */
-  resolveModel(settings: Pick<GenSettings, "intent" | "motion">): string;
+  resolveModel(settings: Partial<GenSettings>): string;
   generate(request: GenerationRequest): Promise<GenerationResult>;
 }

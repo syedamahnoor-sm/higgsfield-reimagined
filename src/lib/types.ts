@@ -8,8 +8,20 @@
 
 export type Mode = "image" | "video";
 
-/** Intent-oriented quality choices. Only intents the active engine genuinely supports are exposed. */
+/** Legacy speed/quality choice kept for older drafts and assets; new work uses `quality`. */
 export type Intent = "auto" | "photoreal" | "fast";
+
+/** What kind of creative output to make. Applied as guidance on the server; never rewrites the prompt. */
+export type Direction = "auto" | "cinematic" | "editorial" | "portrait" | "product" | "illustration";
+
+/** Visual treatment, distinct from Direction. Applied as guidance on the server. */
+export type LookId = "none" | "film-grain" | "dreamy-glow" | "vintage-film" | "noir" | "neon-night" | "high-contrast";
+
+/** Output size (a real model parameter): draft 768, standard 1024, high 1536 px long edge. */
+export type Quality = "draft" | "standard" | "high";
+
+/** "edit" sends an image plus an instruction to change it (real reference-conditioned editing). */
+export type Operation = "generate" | "edit";
 
 export type AspectRatio = "1:1" | "4:5" | "3:4" | "16:9" | "9:16";
 
@@ -56,6 +68,16 @@ export interface GenSettings {
   resolution?: VideoResolution;
   /** AI video only: camera move turned into explicit camera wording on the server. */
   camera?: AiCameraPreset;
+  /** Image: creative direction (guidance added server-side). */
+  direction?: Direction;
+  /** Image: visual look (guidance added server-side). */
+  look?: LookId;
+  /** Image: output size. Falls back to the legacy `intent` when absent. */
+  quality?: Quality;
+  /** Image: fixed seed for reproducible results; undefined means a new random seed each run. */
+  seed?: number;
+  /** Image: generate (default) or edit an input image with an instruction. */
+  operation?: Operation;
 }
 
 export interface Asset {
@@ -86,6 +108,34 @@ export interface Asset {
   renderer?: AssetRenderer;
   /** Underlying model, for subtle display in details only (e.g. "FLUX.2 Turbo"). */
   modelLabel?: string;
+  /** The seed the provider used, so a result can be reproduced. */
+  seed?: number;
+}
+
+/** A reusable saved visual reference (not a trained model). Lives in the browser like the Library. */
+export interface CreativeElement {
+  id: string;
+  name: string;
+  kind: ElementKind;
+  /** Stable path or local-media URL. */
+  url: string;
+  width: number;
+  height: number;
+  color?: string;
+  createdAt: number;
+  sourceAssetId?: string;
+}
+
+export type ElementKind = "character" | "product" | "object" | "reference";
+
+/** A reference image the creator uploaded, kept so it can be picked again later. */
+export interface UploadRecord {
+  id: string;
+  name: string;
+  width: number;
+  height: number;
+  color?: string;
+  createdAt: number;
 }
 
 export type AssetRenderer = "image" | "motion" | "file";
@@ -113,6 +163,10 @@ export interface Job {
   resolvedModel?: string;
   /** Explore item or asset the draft was remixed from, carried onto the produced assets. */
   parentId?: string;
+  /** Generation set: the first job of a Regenerate / Variations / Edit chain. */
+  setId?: string;
+  /** How this job came about within its set. */
+  origin?: "generate" | "regenerate" | "variations" | "edit";
   createdAt: number;
   finishedAt?: number;
 }
@@ -129,4 +183,4 @@ export interface ExploreItem {
   tags: string[];
 }
 
-export type LibraryFilter = "all" | "images" | "videos" | "favorites";
+export type LibraryFilter = "all" | "images" | "videos" | "favorites" | "elements";

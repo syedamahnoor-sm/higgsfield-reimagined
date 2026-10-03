@@ -1,6 +1,8 @@
 import { closestAspect } from "@/lib/aspect";
 import { downloadAsset } from "@/lib/media/download";
-import type { Asset, GenSettings, MediaReference } from "@/lib/types";
+import { createId } from "@/lib/id";
+import { LOCAL_MEDIA_PREFIX } from "@/lib/media/uploads";
+import type { Asset, CreativeElement, ElementKind, GenSettings, Job, MediaReference, UploadRecord } from "@/lib/types";
 import { useSession } from "@/store/session";
 import { useStudio } from "@/store/studio";
 import { toast } from "@/store/toasts";
@@ -36,7 +38,8 @@ export function loadImageDraft(settings: GenSettings, message: string, parentId?
   const { drafts, draftParents, setDraft } = useStudio.getState();
   const previous = drafts.image;
   const previousParent = draftParents.image;
-  setDraft("image", { ...settings, mode: "image" }, parentId);
+  // Edits and fixed seeds belong to the result they produced; a remix starts a fresh generation.
+  setDraft("image", { ...settings, mode: "image", operation: undefined }, parentId);
   focusPrompt();
   const hadWork = previous.prompt.trim().length > 0 || previous.reference;
   toast({
@@ -127,4 +130,85 @@ export async function downloadWithFeedback(asset: Asset) {
   } catch (error) {
     toast({ tone: "error", message: error instanceof Error ? error.message : "Download failed." });
   }
+}
+
+/* ---------- Stage 8: sets, edits, elements, references ---------- */
+
+/** Regenerate: run the same settings again with a new seed, as a new version in the same set. */
+export async function regenerateJob(job: Job) {
+  const { startGeneration } = await import("@/lib/generation/run");
+  void startGeneration({ ...job.settings, seed: undefined }, { parentId: job.parentId, setId: job.setId ?? job.id, origin: "regenerate" });
+}
+
+/**
+ * Variations: more takes from the same prompt, direction, look and settings
+ * with new seeds. These are independent generations, not image-conditioned.
+ */
+export async function variationsOf(job: Job) {
+  const { startGeneration } = await import("@/lib/generation/run");
+  void startGeneration(
+    { ...job.settings, seed: undefined, operation: undefined, count: 2 },
+    { parentId: job.parentId, setId: job.setId ?? job.id, origin: "variations" },
+  );
+}
+
+/** Edit with Prompt: the image is sent to the model as the input image with an instruction. */
+export async function editAsset(asset: Asset, instruction: string, setId?: string) {
+  const { startGeneration } = await import("@/lib/generation/run");
+  void startGeneration(
+    {
+      ...asset.settings,
+      prompt: instruction.trim(),
+      operation: "edit",
+      reference: assetAsReference(asset),
+      count: 1,
+      seed: undefined,
+    },
+    { parentId: asset.id, setId, origin: "edit" },
+  );
+}
+
+export async function copyPrompt(text: string) {
+  try {
+    await navigator.clipboard.writeText(text);
+    toast({ message: "Prompt copied" });
+  } catch {
+    toast({ tone: "error", message: "Couldn't copy the prompt in this browser." });
+  }
+}
+
+/** A short default name for an Element, taken from the prompt. */
+export function elementNameFrom(text: string) {
+  const words = text.trim().split(/\s+/).slice(0, 4).join(" ");
+  return words ? words.charAt(0).toUpperCase() + words.slice(1) : "Untitled element";
+}
+
+/** Saves a reusable visual reference (not a trained model) in this browser. */
+export function saveElement(input: { name: string; kind: ElementKind; url: string; width: number; height: number; color?: string; sourceAssetId?: string }) {
+  const element: CreativeElement = { id: createId("el"), createdAt: Date.now(), ...input, name: input.name.trim() || "Untitled element" };
+  useStudio.getState().saveElement(element);
+  toast({ message: `Saved “${element.name}” to Elements` });
+  return element;
+}
+
+export function elementAsReference(element: CreativeElement): MediaReference {
+  return { source: "asset", id: element.id, url: element.url, width: element.width, height: element.height, color: element.color };
+}
+
+export function uploadAsReference(upload: UploadRecord): MediaReference {
+  return { source: "upload", id: upload.id, name: upload.name, width: upload.width, height: upload.height, color: upload.color };
+}
+
+/** Stable URL for any reference, used when saving it as an Element. */
+export function referenceUrl(reference: MediaReference) {
+  return reference.source === "asset" ? reference.url : `${LOCAL_MEDIA_PREFIX}${reference.id}`;
+}
+
+/** Sets the Image reference from any source (upload, Element, result), matching aspect for new uploads. */
+export function setImageReference(reference: MediaReference | undefined, options: { matchAspect?: boolean } = {}) {
+  const { drafts, updateDraft } = useStudio.getState();
+  const patch: Partial<GenSettings> = { reference };
+  if (reference && options.matchAspect) patch.aspect = closestAspect(reference.width, reference.height);
+  updateDraft("image", patch);
+  return drafts.image.aspect !== patch.aspect && patch.aspect ? patch.aspect : null;
 }

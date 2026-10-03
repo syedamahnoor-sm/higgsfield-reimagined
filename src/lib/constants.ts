@@ -1,17 +1,10 @@
-import type { AiCameraPreset, AspectRatio, ImageCount, Intent, Mode, MotionPreset, VideoDuration, VideoResolution } from "@/lib/types";
+import type { AiCameraPreset, AspectRatio, ImageCount, Mode, MotionPreset, VideoDuration, VideoResolution } from "@/lib/types";
 
 export const APP_NAME = "Ember Studio";
 
 export const MODES: { id: Mode; label: string; href: string }[] = [
   { id: "image", label: "Image", href: "/create/image" },
   { id: "video", label: "Video", href: "/create/video" },
-];
-
-/** Only intents the local engine can honestly deliver. "Design & Text" is intentionally absent. */
-export const INTENTS: { id: Intent; label: string; description: string }[] = [
-  { id: "auto", label: "Auto", description: "Recommended balance of quality and speed" },
-  { id: "photoreal", label: "Photoreal", description: "Natural light, real textures, camera realism" },
-  { id: "fast", label: "Fast", description: "Quick drafts for exploring ideas" },
 ];
 
 export const ASPECT_RATIOS: { id: AspectRatio; label: string; w: number; h: number }[] = [

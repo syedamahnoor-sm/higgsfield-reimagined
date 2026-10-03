@@ -38,15 +38,30 @@ export function Filmstrip({
       )}
     >
       <div className={cn(vertical ? "h-full overflow-y-auto px-3 py-3" : "overflow-x-auto px-3 py-2.5")}>
-        <ol className={cn("flex gap-2", vertical ? "flex-col items-center" : "flex-row")}>
-          {items.map((job) => (
-            <li key={job.id}>
-              <FilmstripItem
-                job={job}
-                active={job.id === session.activeJobId}
-                compact={!vertical}
-                onSelect={() => showJob(mode, job.id)}
-              />
+        {/* Generation sets: versions from Regenerate / Variations / Edit stay together, newest first. */}
+        <ol className={cn("flex gap-3", vertical ? "flex-col items-center" : "flex-row")}>
+          {groupBySet(items).map((set) => (
+            <li key={set[0].setId ?? set[0].id}>
+              <ol
+                aria-label={set.length > 1 ? `Generation set, ${set.length} versions` : undefined}
+                className={cn("flex gap-1.5", vertical ? "flex-col items-center" : "flex-row", set.length > 1 && "rounded-[14px] bg-surface-2/60 p-1 ring-1 ring-line")}
+              >
+                {set.map((job, i) => (
+                  <li key={job.id} className="relative">
+                    <FilmstripItem
+                      job={job}
+                      active={job.id === session.activeJobId}
+                      compact={!vertical}
+                      onSelect={() => showJob(mode, job.id)}
+                    />
+                    {set.length > 1 && (
+                      <span className="pointer-events-none absolute bottom-1 left-1 rounded-[5px] bg-black/65 px-1 font-mono text-[10px] leading-4 text-white">
+                        v{set.length - i}
+                      </span>
+                    )}
+                  </li>
+                ))}
+              </ol>
             </li>
           ))}
         </ol>
@@ -95,4 +110,15 @@ function FilmstripItem({ job, active, compact, onSelect }: { job: Job; active: b
       )}
     </button>
   );
+}
+
+/** Groups session jobs (newest first) into generation sets, keeping each set's versions newest first. */
+function groupBySet(jobs: Job[]) {
+  const sets = new Map<string, Job[]>();
+  for (const job of jobs) {
+    const key = job.setId ?? job.id;
+    if (!sets.has(key)) sets.set(key, []);
+    sets.get(key)!.push(job);
+  }
+  return [...sets.values()];
 }

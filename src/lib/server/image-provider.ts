@@ -10,6 +10,14 @@ export interface ProviderImage {
   contentType: string;
   width: number;
   height: number;
+  /** Seed used for this image, when the provider accepts one. */
+  seed?: number;
+}
+
+/** An input image sent to the model (reference conditioning or editing). */
+export interface ProviderInputImage {
+  bytes: Uint8Array;
+  contentType: string;
 }
 
 export interface ProviderRequest {
@@ -17,6 +25,10 @@ export interface ProviderRequest {
   width: number;
   height: number;
   count: number;
+  /** Base seed; each image uses seed + index. A random base is chosen when absent. */
+  seed?: number;
+  /** Reference / edit input image. */
+  inputImage?: ProviderInputImage;
   signal: AbortSignal;
 }
 
