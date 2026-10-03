@@ -35,7 +35,9 @@ export function ReferenceChip({
   onReplace,
   onRemove,
   busy,
+  label = "Reference",
 }: {
+  label?: string;
   reference: MediaReference;
   onReplace: () => void;
   onRemove: () => void;
@@ -48,7 +50,7 @@ export function ReferenceChip({
     <div className="flex items-center gap-3 rounded-card border border-line bg-surface-1/70 p-1.5 pr-1">
       <div className="relative size-11 shrink-0 overflow-hidden rounded-chip bg-surface-3">
         {url ? (
-          <Image src={url} alt="Reference image" fill sizes="44px" unoptimized={url.startsWith("blob:")} className="object-cover" />
+          <Image src={url} alt={`${label} image`} fill sizes="44px" unoptimized={url.startsWith("blob:")} className="object-cover" />
         ) : url === null ? (
           <span className="grid size-full place-items-center text-fg-subtle">
             <ImageOff aria-hidden="true" className="size-4" />
@@ -60,16 +62,16 @@ export function ReferenceChip({
       <div className="min-w-0 flex-1">
         <p className="truncate text-[13px] font-medium text-fg">{name}</p>
         <p className="font-mono text-2xs text-fg-subtle">
-          {url === null ? "No longer available in this browser" : `Reference · ${reference.width}×${reference.height}`}
+          {url === null ? "No longer available in this browser" : `${label} · ${reference.width}×${reference.height}`}
         </p>
       </div>
-      <Tooltip label="Replace reference">
-        <IconButton aria-label="Replace reference" size="sm" onClick={onReplace} disabled={busy}>
+      <Tooltip label={`Replace ${label.toLowerCase()}`}>
+        <IconButton aria-label={`Replace ${label.toLowerCase()}`} size="sm" onClick={onReplace} disabled={busy}>
           {busy ? <Loader2 aria-hidden="true" className="size-4 animate-spin" /> : <RefreshCw aria-hidden="true" className="size-4" />}
         </IconButton>
       </Tooltip>
-      <Tooltip label="Remove reference">
-        <IconButton aria-label="Remove reference" size="sm" onClick={onRemove}>
+      <Tooltip label={`Remove ${label.toLowerCase()}`}>
+        <IconButton aria-label={`Remove ${label.toLowerCase()}`} size="sm" onClick={onRemove}>
           <X aria-hidden="true" className="size-4" />
         </IconButton>
       </Tooltip>

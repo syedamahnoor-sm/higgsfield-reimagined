@@ -48,7 +48,7 @@ export const localEngine: GenerationEngine = {
   description:
     "Matches your prompt, aspect ratio and reference colour against a curated set of licensed photographs. No external AI service is called.",
 
-  resolveModel: (intent) => PROFILES[intent].label,
+  resolveModel: ({ intent }) => PROFILES[intent].label,
 
   async generate({ settings, onProgress, signal }: GenerationRequest): Promise<GenerationResult> {
     const profile = PROFILES[settings.intent];

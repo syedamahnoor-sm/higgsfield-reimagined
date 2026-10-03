@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
-import { VideoHandoff } from "@/components/create/VideoHandoff";
+import { VideoWorkspace } from "@/components/create/video/VideoWorkspace";
 
 export const metadata: Metadata = { title: "Create video" };
 
 export default function CreateVideoPage() {
-  return <VideoHandoff />;
+  return <VideoWorkspace />;
 }

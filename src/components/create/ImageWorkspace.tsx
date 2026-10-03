@@ -26,7 +26,7 @@ export function ImageWorkspace() {
   return (
     <div className="flex min-h-0 min-w-0 flex-1">
       <div className="relative flex min-w-0 flex-1 flex-col">
-        {hydrated && <Filmstrip orientation="horizontal" className="lg:hidden" />}
+        {hydrated && <Filmstrip mode="image" orientation="horizontal" className="lg:hidden" />}
 
         {/* Out of flow so media size can never push the layout; inset above the composer. */}
         <div className="relative min-h-0 flex-1">
@@ -42,7 +42,7 @@ export function ImageWorkspace() {
         </div>
       </div>
 
-      {hydrated && <Filmstrip orientation="vertical" className="hidden lg:flex" />}
+      {hydrated && <Filmstrip mode="image" orientation="vertical" className="hidden lg:flex" />}
     </div>
   );
 }

@@ -10,7 +10,7 @@ import { getEngine } from "./index";
  * navigates away mid-generation.
  */
 export async function startGeneration(input: GenSettings) {
-  const engine = getEngine();
+  const engine = getEngine(input.mode);
   const studio = useStudio.getState();
   const settings: GenSettings = structuredClone({ ...input, prompt: input.prompt.trim() });
   const job: Job = {
@@ -47,6 +47,7 @@ export async function startGeneration(input: GenSettings) {
       jobId: job.id,
       color: m.color,
       attribution: m.attribution,
+      renderer: m.renderer,
     }));
     useStudio.getState().completeJob(
       job.id,

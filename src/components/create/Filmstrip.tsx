@@ -1,9 +1,9 @@
 "use client";
 
-import Image from "next/image";
 import { AlertTriangle } from "lucide-react";
+import { AssetThumb } from "@/components/media/AssetThumb";
 import { cn } from "@/lib/cn";
-import type { Job } from "@/lib/types";
+import type { Job, Mode } from "@/lib/types";
 import { useSession } from "@/store/session";
 import { useStudio } from "@/store/studio";
 
@@ -11,8 +11,16 @@ import { useStudio } from "@/store/studio";
  * Session history. Every generation from this session stays one click away;
  * selecting one restores it on the canvas without touching the others.
  */
-export function Filmstrip({ orientation, className }: { orientation: "vertical" | "horizontal"; className?: string }) {
-  const session = useSession((s) => s.sessions.image);
+export function Filmstrip({
+  mode,
+  orientation,
+  className,
+}: {
+  mode: Mode;
+  orientation: "vertical" | "horizontal";
+  className?: string;
+}) {
+  const session = useSession((s) => s.sessions[mode]);
   const showJob = useSession((s) => s.showJob);
   const jobs = useStudio((s) => s.jobs);
   const items = session.jobIds.map((id) => jobs[id]).filter(Boolean);
@@ -37,7 +45,7 @@ export function Filmstrip({ orientation, className }: { orientation: "vertical" 
                 job={job}
                 active={job.id === session.activeJobId}
                 compact={!vertical}
-                onSelect={() => showJob("image", job.id)}
+                onSelect={() => showJob(mode, job.id)}
               />
             </li>
           ))}
@@ -66,9 +74,7 @@ function FilmstripItem({ job, active, compact, onSelect }: { job: Job; active: b
           : "opacity-70 ring-1 ring-line hover:opacity-100",
       )}
     >
-      {firstAsset && (
-        <Image src={firstAsset.url} alt="" fill sizes="56px" className="object-cover" />
-      )}
+      {firstAsset && <AssetThumb asset={firstAsset} sizes="56px" />}
       {pending && (
         <>
           <span className="shimmer absolute inset-0" />

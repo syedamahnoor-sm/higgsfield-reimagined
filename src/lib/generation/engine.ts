@@ -1,4 +1,4 @@
-import type { Attribution, GenSettings, Intent } from "@/lib/types";
+import type { AssetRenderer, Attribution, GenSettings } from "@/lib/types";
 
 /**
  * The single seam between the UI and whatever produces media.
@@ -16,6 +16,8 @@ export interface GeneratedMedia {
   height: number;
   color?: string;
   attribution?: Attribution;
+  /** Defaults to "image". */
+  renderer?: AssetRenderer;
 }
 
 export interface GenerationResult {
@@ -43,7 +45,7 @@ export interface GenerationEngine {
   label: string;
   /** One-sentence plain-language explanation of what this engine actually does. */
   description: string;
-  /** What an intent resolves to on this engine, so the UI can show it before generating. */
-  resolveModel(intent: Intent): string;
+  /** What the engine resolves to for these settings, so the UI can show it before generating. */
+  resolveModel(settings: Pick<GenSettings, "intent" | "motion">): string;
   generate(request: GenerationRequest): Promise<GenerationResult>;
 }

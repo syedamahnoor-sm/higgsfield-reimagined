@@ -27,13 +27,14 @@ export function useAssetActions(asset: Asset) {
   const pathname = usePathname();
   const toggleFavorite = useStudio((s) => s.toggleFavorite);
   const [downloading, setDownloading] = useState(false);
-  const toImage = () => {
-    if (pathname !== "/create/image") router.push("/create/image");
+  const goTo = (path: string) => {
+    if (pathname !== path) router.push(path);
   };
+  const toImage = () => goTo("/create/image");
   return {
     remix: () => {
       remixAsset(asset);
-      toImage();
+      goTo(asset.kind === "video" ? "/create/video" : "/create/image");
     },
     reference: () => {
       setAssetAsReference(asset);

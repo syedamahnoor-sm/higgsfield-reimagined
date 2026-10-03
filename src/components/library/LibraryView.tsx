@@ -1,7 +1,6 @@
 "use client";
 
-import Image from "next/image";
-import { Clapperboard, Compass, Download, Heart, ImageOff, ImageUp, Images, Loader2, Shuffle, Sparkles } from "lucide-react";
+import { Clapperboard, Compass, Download, Heart, ImageUp, Images, Loader2, Shuffle, Sparkles } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { ACTION_COPY, TileActions, useAssetActions } from "@/components/create/ResultActions";
@@ -13,7 +12,9 @@ import { FilterChips } from "@/components/ui/FilterChips";
 import { cn } from "@/lib/cn";
 import { INTENTS } from "@/lib/constants";
 import { findExploreItem } from "@/lib/explore";
-import { useReferenceUrl } from "@/lib/media/useReferenceUrl";
+import { MotionCard, MotionDetails } from "./MotionLibrary";
+import { ReferenceRow } from "@/components/media/ReferenceRow";
+import { MotionPlayer } from "@/components/motion/MotionPlayer";
 import type { Asset, LibraryFilter } from "@/lib/types";
 import { useHydrated } from "@/store/hydration";
 import { useStudio } from "@/store/studio";
@@ -32,6 +33,7 @@ export function LibraryView() {
   const assets = useStudio(useShallow((s) => Object.values(s.assets)));
   const [filter, setFilter] = useState<LibraryFilter>("all");
   const [openId, setOpenId] = useState<string | null>(null);
+  const [replayKey, setReplayKey] = useState(0);
 
   const sorted = useMemo(() => [...assets].sort((a, b) => b.createdAt - a.createdAt), [assets]);
   const visible = useMemo(() => sorted.filter((a) => matches(a, filter)), [sorted, filter]);
@@ -109,11 +111,35 @@ export function LibraryView() {
 
       <MediaViewer
         label={open ? "Library item" : "Library"}
-        media={open && { key: open.id, src: open.url, alt: open.settings.prompt, aspect: open.width / open.height }}
+        media={
+          open && {
+            key: open.id,
+            src: open.url,
+            alt: open.settings.prompt,
+            aspect: open.width / open.height,
+            node:
+              open.renderer === "motion" ? (
+                <MotionPlayer
+                  source={open.settings.reference}
+                  preset={open.settings.motion ?? "push-in"}
+                  duration={open.settings.duration ?? 5}
+                  mode="once"
+                  playKey={replayKey}
+                />
+              ) : undefined,
+          }
+        }
         onClose={() => setOpenId(null)}
         onPrev={openIndex >= 0 && visible.length > 1 ? () => step(-1) : undefined}
         onNext={openIndex >= 0 && visible.length > 1 ? () => step(1) : undefined}
-        details={open && <AssetDetails asset={open} />}
+        details={
+          open &&
+          (open.renderer === "motion" ? (
+            <MotionDetails asset={open} onReplay={() => setReplayKey((k) => k + 1)} />
+          ) : (
+            <AssetDetails asset={open} />
+          ))
+        }
       />
     </>
   );
@@ -162,6 +188,7 @@ function FilteredEmpty({ filter }: { filter: LibraryFilter }) {
 }
 
 function LibraryCard({ asset, preload, onOpen }: { asset: Asset; preload: boolean; onOpen: () => void }) {
+  if (asset.renderer === "motion") return <MotionCard asset={asset} onOpen={onOpen} />;
   return (
     <MediaCard
       src={asset.url}
@@ -262,33 +289,6 @@ function AssetDetails({ asset }: { asset: Asset }) {
           on Unsplash
         </p>
       )}
-    </div>
-  );
-}
-
-/** Shows the reference used for a generation, degrading gracefully if an upload is gone. */
-function ReferenceRow({ asset }: { asset: Asset }) {
-  const reference = asset.settings.reference!;
-  const url = useReferenceUrl(reference);
-  return (
-    <div className="flex items-center gap-3 rounded-card border border-line p-2">
-      <div className="relative size-11 shrink-0 overflow-hidden rounded-chip bg-surface-3">
-        {url ? (
-          <Image src={url} alt="Reference used" fill sizes="44px" unoptimized={url.startsWith("blob:")} className="object-cover" />
-        ) : url === null ? (
-          <span className="grid size-full place-items-center text-fg-subtle">
-            <ImageOff aria-hidden="true" className="size-4" />
-          </span>
-        ) : (
-          <span className="shimmer block size-full" />
-        )}
-      </div>
-      <div className="min-w-0 text-[13px]">
-        <p className="text-fg-muted">Generated with a reference</p>
-        <p className="truncate font-mono text-2xs text-fg-subtle">
-          {url === null ? "Reference no longer available on this device" : reference.source === "upload" ? reference.name : "From your results"}
-        </p>
-      </div>
     </div>
   );
 }

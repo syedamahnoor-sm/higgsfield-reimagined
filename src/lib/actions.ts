@@ -1,6 +1,7 @@
 import { closestAspect } from "@/lib/aspect";
 import { downloadAsset } from "@/lib/media/download";
 import type { Asset, GenSettings, MediaReference } from "@/lib/types";
+import { useSession } from "@/store/session";
 import { useStudio } from "@/store/studio";
 import { toast } from "@/store/toasts";
 
@@ -46,8 +47,43 @@ export function loadImageDraft(settings: GenSettings, message: string, parentId?
   });
 }
 
+/** Remix reuses settings: images go back to the Image composer, motion clips to the Video composer. */
 export function remixAsset(asset: Asset) {
+  if (asset.kind === "video") {
+    loadVideoDraft(asset.settings, "Motion settings loaded. Adjust them and animate again.", asset.parentId);
+    return;
+  }
   loadImageDraft(asset.settings, "Prompt and settings loaded into the composer", asset.id);
+}
+
+/** Replaces the video draft and shows its source on the Video canvas, with Undo. */
+export function loadVideoDraft(settings: GenSettings, message: string, parentId?: string) {
+  const { drafts, draftParents, setDraft } = useStudio.getState();
+  const previous = drafts.video;
+  const previousParent = draftParents.video;
+  setDraft("video", { ...settings, mode: "video" }, parentId);
+  useSession.getState().showStart("video");
+  toast({
+    message,
+    action: previous.reference
+      ? { label: "Undo", onClick: () => useStudio.getState().setDraft("video", previous, previousParent) }
+      : undefined,
+  });
+}
+
+/** Sets the Video source (an upload or one of the user's images), defaulting the aspect ratio to the source's. */
+export function setVideoSource(reference: MediaReference | undefined, parentId?: string) {
+  const { drafts, setDraft } = useStudio.getState();
+  setDraft(
+    "video",
+    {
+      ...drafts.video,
+      reference,
+      aspect: reference ? closestAspect(reference.width, reference.height) : drafts.video.aspect,
+    },
+    parentId,
+  );
+  useSession.getState().showStart("video");
 }
 
 export function assetAsReference(asset: Asset): MediaReference {
@@ -67,6 +103,7 @@ export function setAssetAsReference(asset: Asset) {
 
 /** Prepares the Video draft with this image as its source. The caller navigates to /create/video. */
 export function prepareAnimate(asset: Asset) {
+  useSession.getState().showStart("video");
   const { drafts, setDraft } = useStudio.getState();
   setDraft(
     "video",

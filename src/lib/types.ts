@@ -64,7 +64,15 @@ export interface Asset {
   color?: string;
   /** Credit for media that came from a curated photo set rather than a model. */
   attribution?: Attribution;
+  /**
+   * How the asset is displayed. "image" (default) shows `url`; "motion" is a
+   * browser-motion clip reconstructed from `settings.reference` + motion
+   * settings; "file" would be a real video file from a future provider.
+   */
+  renderer?: AssetRenderer;
 }
+
+export type AssetRenderer = "image" | "motion" | "file";
 
 export interface Attribution {
   name: string;

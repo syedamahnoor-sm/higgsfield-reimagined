@@ -27,10 +27,10 @@ export const IMAGE_COUNTS: ImageCount[] = [1, 2, 4];
 export const MOTION_PRESETS: { id: MotionPreset; label: string; description: string }[] = [
   { id: "push-in", label: "Push in", description: "Slow dolly toward the subject" },
   { id: "pull-out", label: "Pull out", description: "Reveal the scene by easing back" },
-  { id: "pan", label: "Pan", description: "Lateral camera sweep" },
-  { id: "orbit", label: "Orbit", description: "Parallax arc around the subject" },
-  { id: "drift", label: "Drift", description: "Gentle floating movement" },
-  { id: "handheld", label: "Handheld", description: "Subtle organic camera shake" },
+  { id: "pan", label: "Pan", description: "Slow sideways sweep across the scene" },
+  { id: "orbit", label: "Orbit", description: "Curved camera arc with a gentle tilt" },
+  { id: "drift", label: "Drift", description: "Gentle floating move with a slow zoom" },
+  { id: "handheld", label: "Handheld", description: "Restrained, organic camera sway" },
 ];
 
 export const VIDEO_DURATIONS: VideoDuration[] = [5, 10];

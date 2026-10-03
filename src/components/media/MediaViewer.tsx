@@ -15,6 +15,8 @@ export interface ViewerMedia {
   alt: string;
   /** width / height of the displayed crop */
   aspect: number;
+  /** Replaces the default image, e.g. with a motion player. */
+  node?: ReactNode;
 }
 
 /**
@@ -99,7 +101,7 @@ export function MediaViewer({
                 className="pointer-events-auto relative overflow-hidden rounded-card bg-surface-2 ring-1 ring-line-strong"
                 style={{ width: fit.width, height: fit.height }}
               >
-                <Image src={media.src} alt={media.alt} fill sizes={`${Math.ceil(fit.width)}px`} className="object-cover" />
+                {media.node ?? <Image src={media.src} alt={media.alt} fill sizes={`${Math.ceil(fit.width)}px`} className="object-cover" />}
               </motion.div>
             )}
           </div>

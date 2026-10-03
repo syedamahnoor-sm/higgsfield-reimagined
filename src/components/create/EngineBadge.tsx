@@ -1,11 +1,13 @@
 "use client";
 
+import { usePathname } from "next/navigation";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { getEngine } from "@/lib/generation";
 
-/** Always-visible, honest indicator of what is producing results. */
+/** Always-visible, honest indicator of what is producing results in the current mode. */
 export function EngineBadge() {
-  const engine = getEngine();
+  const pathname = usePathname();
+  const engine = getEngine(pathname.startsWith("/create/video") ? "video" : "image");
   return (
     <Tooltip label={engine.description} side="bottom" align="end">
       <span

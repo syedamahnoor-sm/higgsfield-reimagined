@@ -24,6 +24,7 @@ export function MediaCard({
   onOpen,
   scrim,
   preload,
+  media,
   children,
   className,
 }: {
@@ -37,6 +38,8 @@ export function MediaCard({
   /** Extra content inside the clipping layer, e.g. a gradient and caption. */
   scrim?: ReactNode;
   preload?: boolean;
+  /** Replaces the default image, e.g. with a motion player. */
+  media?: ReactNode;
   children?: ReactNode;
   className?: string;
 }) {
@@ -48,7 +51,9 @@ export function MediaCard({
       style={{ aspectRatio: aspect }}
     >
       <div className="absolute inset-0 overflow-hidden rounded-card bg-surface-2 ring-1 ring-line">
-        {broken ? (
+        {media ? (
+          media
+        ) : broken ? (
           <div className="grid size-full place-items-center text-fg-subtle">
             <span className="flex flex-col items-center gap-2 text-xs">
               <ImageOff aria-hidden="true" className="size-5" />

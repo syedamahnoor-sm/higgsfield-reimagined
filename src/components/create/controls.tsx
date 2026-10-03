@@ -15,7 +15,7 @@ const INTENT_ICONS: Record<Intent, React.ReactNode> = {
 };
 
 export function IntentPicker({ value, onChange }: { value: Intent; onChange: (v: Intent) => void }) {
-  const engine = getEngine();
+  const engine = getEngine("image");
   const options: SelectOption<Intent>[] = INTENTS.map((i) => ({
     id: i.id,
     label: i.id === "auto" ? "Auto" : i.label,
@@ -33,7 +33,7 @@ export function IntentPicker({ value, onChange }: { value: Intent; onChange: (v:
         <div className="flex items-start gap-2 text-xs leading-snug text-fg-subtle">
           <Gauge aria-hidden="true" className="mt-px size-3.5 shrink-0" />
           <span>
-            Runs on <span className="text-fg-muted">{engine.resolveModel(value)}</span>. {engine.description}
+            Runs on <span className="text-fg-muted">{engine.resolveModel({ intent: value })}</span>. {engine.description}
           </span>
         </div>
       }
