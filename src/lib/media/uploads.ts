@@ -60,6 +60,30 @@ function canvasToBlob(canvas: HTMLCanvasElement, type: string, quality: number) 
   );
 }
 
+/**
+ * Stores a generated image locally and returns its stable media URL. AI
+ * results are kept as bytes in IndexedDB rather than as provider URLs, which
+ * may expire; the "local-media:" URL resolves to a fresh object URL on demand.
+ */
+export async function saveGeneratedImage(blob: Blob) {
+  const id = createId("gen");
+  await tx("readwrite", (s) => s.put(blob, id));
+  urlCache.set(id, URL.createObjectURL(blob));
+  return `${LOCAL_MEDIA_PREFIX}${id}`;
+}
+
+export const LOCAL_MEDIA_PREFIX = "local-media:";
+
+export function localMediaId(url: string) {
+  return url.startsWith(LOCAL_MEDIA_PREFIX) ? url.slice(LOCAL_MEDIA_PREFIX.length) : null;
+}
+
+/** Resolves any asset URL to something displayable: stable paths pass through; local media comes from IndexedDB. */
+export async function resolveMediaUrl(url: string) {
+  const id = localMediaId(url);
+  return id ? await getUploadUrl(id) : url;
+}
+
 export class UploadError extends Error {}
 
 /** Validates, downscales and stores a reference image chosen by the user. */

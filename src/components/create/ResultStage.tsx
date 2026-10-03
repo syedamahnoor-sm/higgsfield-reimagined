@@ -1,10 +1,10 @@
 "use client";
 
-import Image from "next/image";
 import { motion } from "motion/react";
 import { AlertTriangle, ArrowLeft, Cpu, Info, PenLine, RotateCcw } from "lucide-react";
 import { useEffect, useRef } from "react";
 import { useShallow } from "zustand/react/shallow";
+import { MediaImage } from "@/components/media/MediaImage";
 import { Button } from "@/components/ui/Button";
 import { focusPrompt } from "@/lib/actions";
 import { aspectValue, fitGrid } from "@/lib/aspect";
@@ -152,7 +152,7 @@ function JobStatusLabel({ job }: { job: Job }) {
     return (
       <span className="flex items-center gap-1.5 text-fg-muted">
         <span className="size-1.5 animate-pulse rounded-full bg-accent" aria-hidden="true" />
-        Rendering {Math.round(job.progress * 100)}%
+        {job.stage ?? "Rendering"} · {Math.round(job.progress * 100)}%
       </span>
     );
   }
@@ -210,14 +210,7 @@ function ResultTile({
     >
       {/* Clipping layer: only the media and its scrim are clipped to the rounded corners. */}
       <div className="absolute inset-0 overflow-hidden rounded-card bg-surface-2 ring-1 ring-line">
-        <Image
-          src={asset.url}
-          alt={asset.settings.prompt}
-          fill
-          sizes={`${Math.ceil(width)}px`}
-          quality={75}
-          className="object-cover"
-        />
+        <MediaImage src={asset.url} alt={asset.settings.prompt} sizes={`${Math.ceil(width)}px`} quality={75} className="object-cover" />
         {!expanded && (
           <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/35 via-transparent to-black/45 opacity-0 transition-opacity duration-200 group-focus-within:opacity-100 group-hover:opacity-100 [@media(hover:none)]:opacity-100" />
         )}

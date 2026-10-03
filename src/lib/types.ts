@@ -70,6 +70,8 @@ export interface Asset {
    * settings; "file" would be a real video file from a future provider.
    */
   renderer?: AssetRenderer;
+  /** Underlying model, for subtle display in details only (e.g. "FLUX.2 Turbo"). */
+  modelLabel?: string;
 }
 
 export type AssetRenderer = "image" | "motion" | "file";
@@ -87,6 +89,8 @@ export interface Job {
   status: JobStatus;
   /** 0–1 */
   progress: number;
+  /** Human-readable stage while running, e.g. "Creating image". */
+  stage?: string;
   assetIds: string[];
   error?: string;
   /** Engine-provided note about the result, e.g. how closely the prompt was matched. */

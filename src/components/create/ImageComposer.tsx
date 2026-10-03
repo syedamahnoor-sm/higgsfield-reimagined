@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowUp } from "lucide-react";
+import { ArrowUp, Loader2 } from "lucide-react";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { PROMPT_INPUT_ID } from "@/lib/actions";
@@ -33,7 +33,11 @@ export function ImageComposer() {
   const textRef = useRef<HTMLTextAreaElement>(null);
   const isMac = useIsMac();
 
-  const canGenerate = draft.prompt.trim().length > 0 && !busy;
+  // One image request at a time: real generation takes a while and costs money.
+  const generating = useStudio((s) =>
+    Object.values(s.jobs).some((j) => j.settings.mode === "image" && (j.status === "queued" || j.status === "running")),
+  );
+  const canGenerate = draft.prompt.trim().length > 0 && !busy && !generating;
 
   const generate = useCallback(() => {
     if (!canGenerate) return;
@@ -147,16 +151,20 @@ export function ImageComposer() {
           <span className="hidden font-mono text-2xs text-fg-subtle md:inline" aria-hidden="true">
             {isMac ? "⌘" : "Ctrl"} ↵
           </span>
-          <Tooltip label={canGenerate ? "Generate" : "Describe what you want to create first"}>
+          <Tooltip label={generating ? "Generating… one request at a time" : canGenerate ? "Generate" : "Describe what you want to create first"}>
             <button
               type="submit"
               disabled={!canGenerate}
               aria-keyshortcuts={isMac ? "Meta+Enter" : "Control+Enter"}
               className="group flex h-10 items-center gap-2 rounded-card bg-accent pr-3 pl-4 text-sm font-semibold text-accent-fg transition-[background-color,transform,opacity] duration-150 hover:bg-accent-hover active:scale-[0.98] active:bg-accent-press disabled:cursor-not-allowed disabled:bg-surface-3 disabled:text-fg-subtle sm:pl-4.5"
             >
-              Generate
+              {generating ? "Generating" : "Generate"}
               <span className="grid size-6 place-items-center rounded-full bg-black/15 transition-transform duration-150 group-enabled:group-hover:-translate-y-px group-disabled:bg-white/5">
-                <ArrowUp aria-hidden="true" className="size-3.5" strokeWidth={2.5} />
+                {generating ? (
+                  <Loader2 aria-hidden="true" className="size-3.5 animate-spin" />
+                ) : (
+                  <ArrowUp aria-hidden="true" className="size-3.5" strokeWidth={2.5} />
+                )}
               </span>
             </button>
           </Tooltip>

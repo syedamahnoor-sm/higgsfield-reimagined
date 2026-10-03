@@ -26,6 +26,8 @@ export interface GenerationResult {
   resolvedModel: string;
   /** Optional honest note about the result, shown with its metadata. */
   note?: string;
+  /** Underlying model name for subtle display in asset details. */
+  modelLabel?: string;
 }
 
 export interface GenerationRequest {
@@ -34,7 +36,7 @@ export interface GenerationRequest {
    * Reports progress in the 0–1 range. The first call marks the job as
    * running; until then it is considered queued.
    */
-  onProgress?: (progress: number) => void;
+  onProgress?: (progress: number, stage?: string) => void;
   signal?: AbortSignal;
 }
 

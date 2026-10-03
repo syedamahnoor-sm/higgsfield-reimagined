@@ -1,9 +1,9 @@
 "use client";
 
-import Image from "next/image";
 import { ImagePlus, Loader2, Sparkles } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
+import { MediaImage } from "@/components/media/MediaImage";
 import { ButtonLink } from "@/components/ui/Button";
 import { assetAsReference, setVideoSource } from "@/lib/actions";
 import { cn } from "@/lib/cn";
@@ -78,7 +78,7 @@ export function SourcePicker() {
                     title={asset.settings.prompt}
                     className="relative block aspect-square w-full overflow-hidden rounded-chip bg-surface-2 ring-1 ring-line transition-[box-shadow,transform] duration-150 hover:ring-line-strong active:scale-[0.97]"
                   >
-                    <Image src={asset.url} alt="" fill sizes="96px" className="object-cover" />
+                    <MediaImage src={asset.url} alt="" sizes="96px" className="object-cover" />
                   </button>
                 </li>
               ))}

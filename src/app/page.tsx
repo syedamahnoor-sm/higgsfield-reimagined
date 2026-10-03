@@ -45,7 +45,7 @@ export default function LandingPage() {
                 Explore ideas
               </ButtonLink>
             </div>
-            <p className="mt-5 text-xs text-fg-subtle">No sign-up. Your work stays in your browser.</p>
+            <p className="mt-5 text-xs text-fg-subtle">No sign-up. Prompts go to our AI image service; your library stays in this browser.</p>
           </div>
           <HeroShowcase />
         </section>
@@ -82,7 +82,7 @@ export default function LandingPage() {
             <LogoMark className="size-4 text-fg-muted" />
             {APP_NAME}
           </span>
-          <span>Results come from a local preview engine and curated photography via Unsplash.</span>
+          <span>Images are made with AI, with a local preview as a fallback. Example photography via Unsplash.</span>
         </div>
       </footer>
     </div>

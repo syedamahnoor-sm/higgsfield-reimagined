@@ -1,10 +1,10 @@
 "use client";
 
-import Image from "next/image";
 import { motion } from "motion/react";
 import { ChevronLeft, ChevronRight, X } from "lucide-react";
 import { useEffect, useRef, type ReactNode } from "react";
 import { IconButton } from "@/components/ui/IconButton";
+import { MediaImage } from "./MediaImage";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { fitGrid } from "@/lib/aspect";
 import { useElementSize } from "@/lib/useElementSize";
@@ -101,7 +101,7 @@ export function MediaViewer({
                 className="pointer-events-auto relative overflow-hidden rounded-card bg-surface-2 ring-1 ring-line-strong"
                 style={{ width: fit.width, height: fit.height }}
               >
-                {media.node ?? <Image src={media.src} alt={media.alt} fill sizes={`${Math.ceil(fit.width)}px`} className="object-cover" />}
+                {media.node ?? <MediaImage src={media.src} alt={media.alt} sizes={`${Math.ceil(fit.width)}px`} className="object-cover" />}
               </motion.div>
             )}
           </div>

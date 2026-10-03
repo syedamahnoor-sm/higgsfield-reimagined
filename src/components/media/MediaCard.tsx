@@ -1,9 +1,9 @@
 "use client";
 
-import Image from "next/image";
 import { ImageOff } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { cn } from "@/lib/cn";
+import { MediaImage } from "./MediaImage";
 
 /** Reveal-on-hover/focus for card actions; always visible on touch devices. */
 export const HOVER_REVEAL =
@@ -61,10 +61,9 @@ export function MediaCard({
             </span>
           </div>
         ) : (
-          <Image
+          <MediaImage
             src={src}
             alt={alt}
-            fill
             sizes={sizes}
             preload={preload}
             onError={() => setBroken(true)}

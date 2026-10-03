@@ -98,7 +98,7 @@ function ResultsMock() {
   return (
     <div aria-hidden="true" className="flex h-full flex-col">
       <p className="truncate text-[11px] text-fg-muted">{PROMPT}</p>
-      <p className="mt-0.5 font-mono text-[10px] text-fg-subtle">Local preview · Balanced · 4:5</p>
+      <p className="mt-0.5 font-mono text-[10px] text-fg-subtle">Auto · 4:5 · ×2</p>
       <div className="mt-2.5 grid min-h-0 flex-1 grid-cols-2 gap-2">
         {RESULTS.map((r, i) => (
           <div key={r.id} className={cn("relative overflow-hidden rounded-card ring-1 ring-line", i === 0 && "ring-accent/60")}>

@@ -1,13 +1,30 @@
 "use client";
 
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { getEngine } from "@/lib/generation";
+import { checkAiAvailability } from "@/lib/generation/ai-engine";
+import { localEngine } from "@/lib/generation/local-engine";
 
 /** Always-visible, honest indicator of what is producing results in the current mode. */
 export function EngineBadge() {
   const pathname = usePathname();
-  const engine = getEngine(pathname.startsWith("/create/video") ? "video" : "image");
+  const video = pathname.startsWith("/create/video");
+  const [aiAvailable, setAiAvailable] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    let alive = true;
+    void checkAiAvailability().then((ok) => {
+      if (alive) setAiAvailable(ok);
+    });
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  // If AI generation isn't configured, Image results come from the local preview engine: say so.
+  const engine = video ? getEngine("video") : aiAvailable === false ? localEngine : getEngine("image");
   return (
     <Tooltip label={engine.description} side="bottom" align="end">
       <span

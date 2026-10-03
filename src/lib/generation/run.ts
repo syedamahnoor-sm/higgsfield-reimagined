@@ -29,7 +29,7 @@ export async function startGeneration(input: GenSettings) {
   try {
     const result = await engine.generate({
       settings,
-      onProgress: (progress) => useStudio.getState().patchJob(job.id, { status: "running", progress }),
+      onProgress: (progress, stage) => useStudio.getState().patchJob(job.id, { status: "running", progress, stage }),
     });
     const now = Date.now();
     const assets: Asset[] = result.media.map((m, i) => ({
@@ -48,10 +48,11 @@ export async function startGeneration(input: GenSettings) {
       color: m.color,
       attribution: m.attribution,
       renderer: m.renderer,
+      modelLabel: result.modelLabel,
     }));
     useStudio.getState().completeJob(
       job.id,
-      { status: "done", progress: 1, resolvedModel: result.resolvedModel, note: result.note, finishedAt: now },
+      { status: "done", progress: 1, stage: undefined, resolvedModel: result.resolvedModel, note: result.note, finishedAt: now },
       assets,
     );
   } catch (error) {

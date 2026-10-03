@@ -1,6 +1,6 @@
 import { aspectValue, centerCrop } from "@/lib/aspect";
 import { MOTION_PRESETS } from "@/lib/constants";
-import { getUploadUrl } from "@/lib/media/uploads";
+import { LOCAL_MEDIA_PREFIX, resolveMediaUrl } from "@/lib/media/uploads";
 import { loadImage } from "@/lib/motion/presets";
 import type { MediaReference, MotionPreset } from "@/lib/types";
 import type { GenerationEngine, GenerationRequest, GenerationResult } from "./engine";
@@ -24,7 +24,7 @@ function wait(ms: number, signal?: AbortSignal) {
 }
 
 export async function resolveReferenceUrl(reference: MediaReference) {
-  return reference.source === "asset" ? reference.url : await getUploadUrl(reference.id);
+  return resolveMediaUrl(reference.source === "asset" ? reference.url : `${LOCAL_MEDIA_PREFIX}${reference.id}`);
 }
 
 /**

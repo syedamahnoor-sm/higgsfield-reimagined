@@ -1,5 +1,6 @@
 import { centerCrop } from "@/lib/aspect";
 import type { Asset } from "@/lib/types";
+import { resolveMediaUrl } from "./uploads";
 
 function loadImage(src: string) {
   return new Promise<HTMLImageElement>((resolve, reject) => {
@@ -26,7 +27,9 @@ function slug(text: string) {
  * at its stated output resolution.
  */
 export async function downloadAsset(asset: Asset) {
-  const img = await loadImage(asset.url);
+  const src = await resolveMediaUrl(asset.url);
+  if (!src) throw new Error("This image is no longer available on this device.");
+  const img = await loadImage(src);
   const crop = centerCrop(img.naturalWidth, img.naturalHeight, asset.width / asset.height);
   const canvas = document.createElement("canvas");
   canvas.width = asset.width;

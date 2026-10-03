@@ -289,6 +289,7 @@ function AssetDetails({ asset }: { asset: Asset }) {
       <MetaList
         rows={[
           { label: "Engine", value: asset.resolvedModel },
+          ...(asset.modelLabel ? [{ label: "Model", value: asset.modelLabel }] : []),
           { label: "Style", value: intent },
           { label: "Aspect ratio", value: asset.settings.aspect },
           { label: "Size", value: `${asset.width}×${asset.height}` },
