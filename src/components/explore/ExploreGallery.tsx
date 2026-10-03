@@ -23,7 +23,7 @@ function intentLabel(item: Item) {
 }
 
 /** Loads an example into the Image draft and opens Create. Never generates by itself. */
-function useRemixExample() {
+export function useRemixExample() {
   const router = useRouter();
   return useCallback(
     (item: Item) => {

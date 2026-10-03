@@ -33,7 +33,6 @@ export function LibraryView() {
   const assets = useStudio(useShallow((s) => Object.values(s.assets)));
   const [filter, setFilter] = useState<LibraryFilter>("all");
   const [openId, setOpenId] = useState<string | null>(null);
-  const [replayKey, setReplayKey] = useState(0);
 
   const sorted = useMemo(() => [...assets].sort((a, b) => b.createdAt - a.createdAt), [assets]);
   const visible = useMemo(() => sorted.filter((a) => matches(a, filter)), [sorted, filter]);
@@ -46,14 +45,6 @@ export function LibraryView() {
     }),
     [sorted],
   );
-
-  // The viewer follows the asset by id, so unfavoriting inside Favorites doesn't yank it away.
-  const open = openId ? (assets.find((a) => a.id === openId) ?? null) : null;
-  const openIndex = open ? visible.findIndex((a) => a.id === open.id) : -1;
-  const step = (delta: number) => {
-    if (openIndex < 0 || visible.length < 2) return;
-    setOpenId(visible[(openIndex + delta + visible.length) % visible.length].id);
-  };
 
   if (!hydrated) return <div className="min-h-[50dvh]" aria-busy="true" />;
 
@@ -109,39 +100,66 @@ export function LibraryView() {
         </ul>
       )}
 
-      <MediaViewer
-        label={open ? "Library item" : "Library"}
-        media={
-          open && {
-            key: open.id,
-            src: open.url,
-            alt: open.settings.prompt,
-            aspect: open.width / open.height,
-            node:
-              open.renderer === "motion" ? (
-                <MotionPlayer
-                  source={open.settings.reference}
-                  preset={open.settings.motion ?? "push-in"}
-                  duration={open.settings.duration ?? 5}
-                  mode="once"
-                  playKey={replayKey}
-                />
-              ) : undefined,
-          }
-        }
-        onClose={() => setOpenId(null)}
-        onPrev={openIndex >= 0 && visible.length > 1 ? () => step(-1) : undefined}
-        onNext={openIndex >= 0 && visible.length > 1 ? () => step(1) : undefined}
-        details={
-          open &&
-          (open.renderer === "motion" ? (
-            <MotionDetails asset={open} onReplay={() => setReplayKey((k) => k + 1)} />
-          ) : (
-            <AssetDetails asset={open} />
-          ))
-        }
-      />
+      <AssetViewer assets={visible} openId={openId} onOpenChange={setOpenId} />
     </>
+  );
+}
+
+/**
+ * The focused view for the user's own assets (images and motion clips), shared
+ * by the Library grid. `assets` is the list that previous/next steps through.
+ */
+export function AssetViewer({
+  assets,
+  openId,
+  onOpenChange,
+}: {
+  assets: Asset[];
+  openId: string | null;
+  onOpenChange: (id: string | null) => void;
+}) {
+  const [replayKey, setReplayKey] = useState(0);
+  // Follows the asset by id from the store, so unfavoriting inside Favorites doesn't yank it away.
+  const open = useStudio((s) => (openId ? (s.assets[openId] ?? null) : null));
+  const openIndex = open ? assets.findIndex((a) => a.id === open.id) : -1;
+  const step = (delta: number) => {
+    if (openIndex < 0 || assets.length < 2) return;
+    onOpenChange(assets[(openIndex + delta + assets.length) % assets.length].id);
+  };
+
+  return (
+    <MediaViewer
+      label={open ? (open.renderer === "motion" ? "Motion clip" : "Library item") : "Library"}
+      media={
+        open && {
+          key: open.id,
+          src: open.url,
+          alt: open.settings.prompt,
+          aspect: open.width / open.height,
+          node:
+            open.renderer === "motion" ? (
+              <MotionPlayer
+                source={open.settings.reference}
+                preset={open.settings.motion ?? "push-in"}
+                duration={open.settings.duration ?? 5}
+                mode="once"
+                playKey={replayKey}
+              />
+            ) : undefined,
+        }
+      }
+      onClose={() => onOpenChange(null)}
+      onPrev={openIndex >= 0 && assets.length > 1 ? () => step(-1) : undefined}
+      onNext={openIndex >= 0 && assets.length > 1 ? () => step(1) : undefined}
+      details={
+        open &&
+        (open.renderer === "motion" ? (
+          <MotionDetails asset={open} onReplay={() => setReplayKey((k) => k + 1)} />
+        ) : (
+          <AssetDetails asset={open} />
+        ))
+      }
+    />
   );
 }
 

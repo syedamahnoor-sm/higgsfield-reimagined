@@ -16,8 +16,8 @@ export function LogoMark({ className }: { className?: string }) {
 export function Logo() {
   return (
     <Link
-      href="/create/image"
-      aria-label={`${APP_NAME} home`}
+      href="/"
+      aria-label={`${APP_NAME}: back to the start page`}
       className="grid size-10 place-items-center rounded-card text-accent transition-colors duration-150 hover:bg-surface-2"
     >
       <LogoMark className="size-6" />

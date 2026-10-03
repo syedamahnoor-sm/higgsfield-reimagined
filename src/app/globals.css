@@ -126,6 +126,20 @@
   70% { transform: translate(4%, 5%) rotate(1deg); }
 }
 
+/* Landing page motion (all disabled by the reduced-motion rule below). */
+@keyframes landing-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+@keyframes landing-marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+@keyframes caret-blink {
+  0%, 45% { opacity: 1; }
+  50%, 95% { opacity: 0; }
+}
+
 /* Loading surface for media that is still being generated. */
 @keyframes shimmer {
   from {
