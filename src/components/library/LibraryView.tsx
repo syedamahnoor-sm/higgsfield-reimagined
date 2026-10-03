@@ -94,6 +94,7 @@ export function LibraryView() {
       <EmptyPanel>
         <EmptyState
           icon={Images}
+          className="flex-1"
           title="No generations yet"
           description="Every image, video and voice you create is saved here on this device, ready to search, favorite, reuse or add to a project."
           action={
