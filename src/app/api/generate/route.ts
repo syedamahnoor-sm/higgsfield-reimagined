@@ -144,7 +144,7 @@ export async function POST(request: Request) {
     const failure = error instanceof ProviderError ? error : new ProviderError("failed");
     // Safe diagnostics only: category, HTTP status, request id, duration. Never prompts, images, bodies or keys.
     console.warn(
-      `[generate] provider=${provider.id} op=${operation} reason=${failure.reason} status=${failure.diagnostic.status ?? "-"} ms=${Date.now() - started}`,
+      `[generate] provider=${provider.id} op=${operation} reason=${failure.reason} status=${failure.diagnostic.status ?? "-"} code=${failure.diagnostic.code ?? "-"} ms=${Date.now() - started}`,
     );
     return unavailable(failure.reason, failure.reason === "rate_limited" ? 429 : 503);
   } finally {

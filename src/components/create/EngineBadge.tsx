@@ -9,10 +9,17 @@ import { localEngine } from "@/lib/generation/local-engine";
 import { effectiveVideoEngine, useAiVideoAvailable } from "./video/VideoComposer";
 import { useStudio } from "@/store/studio";
 
+const AUDIO_ENGINE = {
+  label: "AI voice",
+  description:
+    "Voice and Transcribe use speech models hosted by Cloudflare Workers AI. Your script or audio file is sent to our audio service.",
+};
+
 /** Always-visible, honest indicator of what is producing results in the current mode. */
 export function EngineBadge() {
   const pathname = usePathname();
   const video = pathname.startsWith("/create/video");
+  const audio = pathname.startsWith("/create/audio");
   const [aiAvailable, setAiAvailable] = useState<boolean | null>(null);
 
   useEffect(() => {
@@ -29,7 +36,9 @@ export function EngineBadge() {
   const videoDraft = useStudio((s) => s.drafts.video);
   const aiVideoAvailable = useAiVideoAvailable();
   // Video: the engine the current draft will really use (AI video, or Motion Preview).
-  const engine = video
+  const engine = audio
+    ? AUDIO_ENGINE
+    : video
     ? getEngine("video", { videoEngine: effectiveVideoEngine(videoDraft, aiVideoAvailable) })
     : aiAvailable === false
       ? localEngine

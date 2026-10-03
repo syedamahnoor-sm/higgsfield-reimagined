@@ -3,13 +3,13 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion } from "motion/react";
-import { ImageIcon, Clapperboard } from "lucide-react";
+import { AudioLines, ImageIcon, Clapperboard } from "lucide-react";
 import { MODES } from "@/lib/constants";
 import { cn } from "@/lib/cn";
 
-const ICONS = { image: ImageIcon, video: Clapperboard } as const;
+const ICONS = { image: ImageIcon, video: Clapperboard, audio: AudioLines } as const;
 
-/** Image / Video toggle. Both modes share one workspace layout, so this is a sibling switch, not navigation. */
+/** Image / Video / Audio switch. The modes share one workspace frame, so this is a sibling switch, not navigation. */
 export function ModeSwitch({ className }: { className?: string }) {
   const pathname = usePathname();
 
@@ -24,7 +24,7 @@ export function ModeSwitch({ className }: { className?: string }) {
             href={mode.href}
             aria-current={active ? "page" : undefined}
             className={cn(
-              "relative flex h-8 items-center gap-2 rounded-chip px-3.5 text-[13px] font-medium transition-colors duration-150",
+              "relative flex h-8 items-center gap-2 rounded-chip px-2.5 text-[13px] font-medium transition-colors duration-150 sm:px-3.5",
               active ? "text-fg" : "text-fg-subtle hover:text-fg-muted",
             )}
           >
@@ -37,7 +37,7 @@ export function ModeSwitch({ className }: { className?: string }) {
               />
             )}
             <Icon aria-hidden="true" strokeWidth={1.75} className={cn("relative size-4", active && "text-accent")} />
-            <span className="relative">{mode.label}</span>
+            <span className={cn("relative", !active && "sr-only sm:not-sr-only")}>{mode.label}</span>
           </Link>
         );
       })}

@@ -66,7 +66,7 @@ export default function LandingPage() {
               Start with an idea.
             </h2>
             <p className="mt-4 max-w-md text-sm leading-relaxed text-fg-muted sm:text-base">
-              Describe it, create it, then bring it to life. One studio, no model menus.
+              Turn an idea into images, motion and voice, then keep the whole direction together in a project. One studio, no model menus.
             </p>
             <ButtonLink href="/create/image" variant="primary" size="lg" className="mt-8">
               Start creating

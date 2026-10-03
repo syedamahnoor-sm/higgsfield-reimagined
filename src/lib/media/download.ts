@@ -52,16 +52,17 @@ export async function downloadAsset(asset: Asset) {
   setTimeout(() => URL.revokeObjectURL(url), 10_000);
 }
 
-/** Real video files are downloaded byte-for-byte, exactly as stored. */
+/** Real video and audio files are downloaded byte-for-byte, exactly as stored. */
 async function downloadFile(asset: Asset) {
+  const audio = asset.kind === "audio";
   const src = await resolveMediaUrl(asset.url);
-  if (!src) throw new Error("This video is no longer available on this device.");
+  if (!src) throw new Error(`This ${audio ? "audio" : "video"} is no longer available on this device.`);
   const blob = await (await fetch(src)).blob();
-  const extension = blob.type.includes("webm") ? "webm" : "mp4";
+  const extension = audio ? (asset.audio?.format === "wav" ? "wav" : "mp3") : blob.type.includes("webm") ? "webm" : "mp4";
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = `ember-video-${slug(asset.settings.prompt)}-${asset.id.slice(-6)}.${extension}`;
+  a.download = `ember-${audio ? `voice-${asset.audio?.speaker ?? ""}` : "video"}-${slug(asset.settings.prompt)}-${asset.id.slice(-6)}.${extension}`;
   document.body.appendChild(a);
   a.click();
   a.remove();

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion } from "motion/react";
 import { cn } from "@/lib/cn";
+import { CommandButton } from "@/components/command/CommandPalette";
 import { Logo } from "./Logo";
 import { NAV_ITEMS, isNavItemActive } from "./nav-items";
 
@@ -57,6 +58,8 @@ export function SideRail() {
           );
         })}
       </nav>
+
+      <CommandButton compact className="mt-auto" />
     </aside>
   );
 }

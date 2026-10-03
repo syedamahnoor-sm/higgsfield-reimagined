@@ -1,11 +1,12 @@
 "use client";
 
 import { useRouter, usePathname } from "next/navigation";
-import { Download, Heart, Images, Loader2, RotateCcw, SlidersHorizontal } from "lucide-react";
+import { Download, FolderPlus, Heart, Images, Loader2, Mic, RotateCcw, SlidersHorizontal } from "lucide-react";
+import { AddToProjectPopover } from "@/components/projects/AddToProject";
 import { useState, useSyncExternalStore } from "react";
 import { IconButton } from "@/components/ui/IconButton";
 import { Tooltip } from "@/components/ui/Tooltip";
-import { downloadWithFeedback, remixAsset } from "@/lib/actions";
+import { downloadWithFeedback, prepareVoiceover, remixAsset } from "@/lib/actions";
 import { cn } from "@/lib/cn";
 import { resolveReferenceUrl } from "@/lib/generation/local-motion-engine";
 import { canExportMotion, exportMotion } from "@/lib/motion/export";
@@ -64,8 +65,42 @@ export function useMotionActions(asset: Asset) {
       if (pathname !== "/create/video") router.push("/create/video");
     },
     favorite: () => toggleFavorite(asset.id),
+    /** Create voiceover: opens Audio → Voice linked to this clip (and its project). */
+    voiceover: () => {
+      prepareVoiceover(asset);
+      router.push("/create/audio");
+    },
     exporter,
   };
+}
+
+/** Icon button that opens Add to project, for result action bars. */
+export function AddToProjectIconButton({ assetId, align = "end" }: { assetId: string; align?: "start" | "end" }) {
+  return (
+    <AddToProjectPopover
+      refs={[{ kind: "asset", id: assetId }]}
+      side="top"
+      align={align}
+      trigger={(props) => (
+        <Tooltip label="Add to project" align={align}>
+          <IconButton {...props} aria-label="Add to project" size="sm">
+            <FolderPlus aria-hidden="true" className="size-4" />
+          </IconButton>
+        </Tooltip>
+      )}
+    />
+  );
+}
+
+/** "Create voiceover" button shared by the video action bars. */
+function VoiceoverButton({ onClick, className }: { onClick: () => void; className: string }) {
+  return (
+    <Tooltip label="Write and generate a voiceover for this clip">
+      <button type="button" onClick={onClick} aria-label="Create voiceover" className={className}>
+        <Mic aria-hidden="true" className="size-4" /> <span className="hidden sm:inline">Create voiceover</span>
+      </button>
+    </Tooltip>
+  );
 }
 
 export function ExportLabel({ exporting, progress, duration }: { exporting: boolean; progress: number; duration: number }) {
@@ -105,6 +140,7 @@ export function MotionActionBar({ asset, onReplay }: { asset: Asset; onReplay: (
           </button>
         </Tooltip>
       )}
+      <VoiceoverButton onClick={a.voiceover} className={button} />
       <span aria-hidden="true" className="mx-1 h-5 w-px bg-line-strong" />
       <Tooltip label={asset.favorite ? "Remove from favorites" : "Add to favorites"} align="end">
         <IconButton
@@ -117,6 +153,7 @@ export function MotionActionBar({ asset, onReplay }: { asset: Asset; onReplay: (
           <Heart aria-hidden="true" className={cn("size-4", asset.favorite && "fill-current")} />
         </IconButton>
       </Tooltip>
+      <AddToProjectIconButton assetId={asset.id} />
     </div>
   );
 }
@@ -130,6 +167,16 @@ export function AiVideoActionBar({ asset }: { asset: Asset }) {
     "flex h-9 items-center gap-2 rounded-chip px-3 text-[13px] font-medium text-fg-muted transition-colors duration-150 hover:bg-surface-3 hover:text-fg disabled:opacity-60";
   return (
     <div role="toolbar" aria-label="Video actions" className="flex items-center justify-center gap-0.5">
+      <Tooltip label="Write and generate a voiceover for this clip">
+        <button
+          type="button"
+          onClick={a.voiceover}
+          aria-label="Create voiceover"
+          className="mr-1 flex h-9 items-center gap-2 rounded-chip bg-accent-soft px-3 text-[13px] font-semibold text-accent transition-colors duration-150 hover:bg-accent hover:text-accent-fg"
+        >
+          <Mic aria-hidden="true" className="size-4" /> <span className="hidden sm:inline">Create voiceover</span>
+        </button>
+      </Tooltip>
       <Tooltip label="Download this video">
         <button
           type="button"
@@ -152,8 +199,8 @@ export function AiVideoActionBar({ asset }: { asset: Asset }) {
         </button>
       </Tooltip>
       <Tooltip label="See it with the rest of your work">
-        <button type="button" onClick={() => router.push("/library")} aria-label="Open in Library" className={button}>
-          <Images aria-hidden="true" className="size-4" /> <span className="hidden sm:inline">Open in Library</span>
+        <button type="button" onClick={() => router.push(`/library?open=${asset.id}`)} aria-label="Open in Library" className={button}>
+          <Images aria-hidden="true" className="size-4" /> <span className="hidden md:inline">Open in Library</span>
         </button>
       </Tooltip>
       <span aria-hidden="true" className="mx-1 h-5 w-px bg-line-strong" />
@@ -168,6 +215,7 @@ export function AiVideoActionBar({ asset }: { asset: Asset }) {
           <Heart aria-hidden="true" className={cn("size-4", asset.favorite && "fill-current")} />
         </IconButton>
       </Tooltip>
+      <AddToProjectIconButton assetId={asset.id} />
     </div>
   );
 }

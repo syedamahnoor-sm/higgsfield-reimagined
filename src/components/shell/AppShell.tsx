@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { CommandPalette } from "@/components/command/CommandPalette";
 import { MobileNav } from "./MobileNav";
 import { SideRail } from "./SideRail";
 
@@ -19,6 +20,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         {children}
       </main>
       <MobileNav />
+      <CommandPalette />
     </>
   );
 }

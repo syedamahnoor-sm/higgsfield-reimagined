@@ -1,4 +1,5 @@
 import "server-only";
+import { cloudflareFailure } from "./cloudflare-errors";
 import { ProviderError } from "./image-provider";
 
 /**
@@ -58,10 +59,7 @@ export async function enhancePrompt({ prompt, direction, signal }: { prompt: str
     if (error instanceof DOMException && error.name === "AbortError") throw new ProviderError("timeout");
     throw new ProviderError("failed");
   }
-  if (!response.ok) {
-    const status = response.status;
-    throw new ProviderError(status === 401 || status === 403 ? "auth" : status === 429 ? "rate_limited" : "failed", { status });
-  }
+  if (!response.ok) throw await cloudflareFailure(response);
   const json = (await response.json()) as { success?: boolean; result?: { response?: string } };
   const text = json.result?.response ? tidyEnhanced(json.result.response) : null;
   if (!text || json.success === false) throw new ProviderError("failed", { status: response.status });

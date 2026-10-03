@@ -15,6 +15,8 @@ import { localEngine } from "./local-engine";
 
 const CLIENT_TIMEOUT_MS = 55_000;
 export const AI_FALLBACK_NOTE = "AI generation unavailable, so this is a local preview instead.";
+/** When the provider's usage limit is reached: the result is a labelled local preview, never presented as AI output. */
+export const AI_LIMIT_NOTE = "AI generation is temporarily unavailable (usage limit reached), so this is a local preview, not an AI result. Try again later.";
 /** The model requires input images smaller than 512x512. */
 const INPUT_IMAGE_EDGE = 504;
 
@@ -26,7 +28,12 @@ interface ApiImage {
   seed?: number;
 }
 
-class AiUnavailable extends Error {}
+class AiUnavailable extends Error {
+  /** True when the provider's usage or rate limit was reached. */
+  constructor(readonly limited = false) {
+    super("AI generation unavailable");
+  }
+}
 
 /** Engine label; Direction and Look are shown separately next to it. */
 export function aiLabel(settings: Partial<GenSettings>) {
@@ -50,8 +57,12 @@ async function inputImageFor(reference: MediaReference) {
 }
 
 export class EditUnavailableError extends Error {
-  constructor() {
-    super("Editing needs AI generation, which isn't available right now. Your image is unchanged.");
+  constructor(limited = false) {
+    super(
+      limited
+        ? "AI editing is temporarily unavailable. Your image is unchanged; try again later."
+        : "Editing needs AI generation, which isn't available right now. Your image is unchanged.",
+    );
   }
 }
 
@@ -130,7 +141,7 @@ export const aiImageEngine: GenerationEngine = {
         }),
         signal: controller.signal,
       });
-      if (!response.ok) throw new AiUnavailable();
+      if (!response.ok) throw new AiUnavailable(response.status === 429);
       const json = (await response.json()) as { images?: ApiImage[]; model?: string };
       if (!json.images?.length) throw new AiUnavailable();
 
@@ -153,7 +164,7 @@ export const aiImageEngine: GenerationEngine = {
       clearInterval(ticker);
       if (signal?.aborted) throw error;
       // An edit can't be faked with unrelated local photos: say so plainly instead.
-      if (editing) throw new EditUnavailableError();
+      if (editing) throw new EditUnavailableError(error instanceof AiUnavailable && error.limited);
       // Any failure (not configured, provider error, timeout, storage) → keep the creator moving.
       if (!(error instanceof AiUnavailable) && process.env.NODE_ENV !== "production") {
         console.warn("[ai-engine] falling back to local preview:", error instanceof Error ? error.name : "unknown");
@@ -163,7 +174,8 @@ export const aiImageEngine: GenerationEngine = {
         signal,
         onProgress: (p) => onProgress?.(p, "Creating local preview"),
       });
-      return { ...fallback, note: [AI_FALLBACK_NOTE, fallback.note].filter(Boolean).join(" ") };
+      const limited = error instanceof AiUnavailable && error.limited;
+      return { ...fallback, note: [limited ? AI_LIMIT_NOTE : AI_FALLBACK_NOTE, fallback.note].filter(Boolean).join(" ") };
     } finally {
       clearInterval(ticker);
       clearTimeout(timeout);

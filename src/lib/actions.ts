@@ -3,6 +3,8 @@ import { downloadAsset } from "@/lib/media/download";
 import { createId } from "@/lib/id";
 import { LOCAL_MEDIA_PREFIX } from "@/lib/media/uploads";
 import type { Asset, CreativeElement, ElementKind, GenSettings, Job, MediaReference, UploadRecord } from "@/lib/types";
+import { projectForAsset } from "@/lib/projects";
+import { useAudioSession } from "@/store/audio";
 import { useSession } from "@/store/session";
 import { useStudio } from "@/store/studio";
 import { toast } from "@/store/toasts";
@@ -50,8 +52,12 @@ export function loadImageDraft(settings: GenSettings, message: string, parentId?
   });
 }
 
-/** Remix reuses settings: images go back to the Image composer, motion clips to the Video composer. */
+/** Remix reuses settings: images go back to the Image composer, clips to Video, voices to Audio. */
 export function remixAsset(asset: Asset) {
+  if (asset.kind === "audio") {
+    loadVoiceDraft(asset);
+    return;
+  }
   if (asset.kind === "video") {
     const message =
       asset.settings.videoEngine === "ai"
@@ -111,7 +117,10 @@ export function setAssetAsReference(asset: Asset) {
 /** Prepares the Video draft with this image as its source. The caller navigates to /create/video. */
 export function prepareAnimate(asset: Asset) {
   useSession.getState().showStart("video");
-  const { drafts, setDraft } = useStudio.getState();
+  const { drafts, setDraft, setProjectContext } = useStudio.getState();
+  // The clip joins the source image's project, shown (and removable) in the composer.
+  const projectId = projectForAsset(asset.id);
+  if (projectId) setProjectContext("video", projectId);
   setDraft(
     "video",
     {
@@ -137,7 +146,10 @@ export async function downloadWithFeedback(asset: Asset) {
 /** Regenerate: run the same settings again with a new seed, as a new version in the same set. */
 export async function regenerateJob(job: Job) {
   const { startGeneration } = await import("@/lib/generation/run");
-  void startGeneration({ ...job.settings, seed: undefined }, { parentId: job.parentId, setId: job.setId ?? job.id, origin: "regenerate" });
+  void startGeneration(
+    { ...job.settings, seed: undefined },
+    { parentId: job.parentId, setId: job.setId ?? job.id, origin: "regenerate", projectId: job.projectId },
+  );
 }
 
 /**
@@ -148,7 +160,7 @@ export async function variationsOf(job: Job) {
   const { startGeneration } = await import("@/lib/generation/run");
   void startGeneration(
     { ...job.settings, seed: undefined, operation: undefined, count: 2 },
-    { parentId: job.parentId, setId: job.setId ?? job.id, origin: "variations" },
+    { parentId: job.parentId, setId: job.setId ?? job.id, origin: "variations", projectId: job.projectId },
   );
 }
 
@@ -164,8 +176,45 @@ export async function editAsset(asset: Asset, instruction: string, setId?: strin
       count: 1,
       seed: undefined,
     },
-    { parentId: asset.id, setId, origin: "edit" },
+    // An edit joins the project its source image belongs to.
+    { parentId: asset.id, setId, origin: "edit", projectId: projectForAsset(asset.id) },
   );
+}
+
+/* ---------- Stage 9: voice ---------- */
+
+/** Loads a voice result's script and settings back into the Voice composer. */
+export function loadVoiceDraft(asset: Asset) {
+  const audio = asset.audio;
+  if (!audio) return;
+  const { voiceDraft, updateVoiceDraft, setVoiceParent } = useStudio.getState();
+  const previous = voiceDraft;
+  updateVoiceDraft({
+    script: audio.script,
+    language: audio.language,
+    speaker: audio.speaker,
+    format: audio.format,
+    bitRate: audio.bitRate,
+    sampleRate: audio.sampleRate,
+  });
+  setVoiceParent(asset.parentId);
+  toast({
+    message: "Script and voice loaded into the Voice composer",
+    action: { label: "Undo", onClick: () => useStudio.getState().updateVoiceDraft(previous) },
+  });
+}
+
+/**
+ * Create voiceover: opens Voice with this video (or image) as the source, so
+ * the audio is linked to it and joins its project. The script is left for
+ * the creator to write. The caller navigates to /create/audio.
+ */
+export function prepareVoiceover(asset: Asset) {
+  const { setVoiceParent, setProjectContext } = useStudio.getState();
+  setVoiceParent(asset.id);
+  const projectId = projectForAsset(asset.id);
+  if (projectId) setProjectContext("audio", projectId);
+  useAudioSession.getState().setTab("voice");
 }
 
 export async function copyPrompt(text: string) {

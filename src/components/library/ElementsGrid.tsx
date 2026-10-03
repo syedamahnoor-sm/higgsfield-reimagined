@@ -1,7 +1,8 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { Bookmark, ImageUp, Trash2 } from "lucide-react";
+import { Bookmark, FolderPlus, ImageUp, Trash2 } from "lucide-react";
+import { AddToProjectPopover } from "@/components/projects/AddToProject";
 import { useMemo } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { HOVER_REVEAL, MediaCard } from "@/components/media/MediaCard";
@@ -14,11 +15,14 @@ import { useStudio } from "@/store/studio";
 import { toast } from "@/store/toasts";
 
 /** Library's Elements view: reusable saved references, ready to drop into a new generation. */
-export function ElementsGrid() {
+export function ElementsGrid({ ids }: { ids?: string[] }) {
   const router = useRouter();
   const elements = useStudio(useShallow((s) => Object.values(s.elements)));
   const removeElement = useStudio((s) => s.removeElement);
-  const sorted = useMemo(() => [...elements].sort((a, b) => b.createdAt - a.createdAt), [elements]);
+  const sorted = useMemo(
+    () => [...elements].filter((e) => !ids || ids.includes(e.id)).sort((a, b) => b.createdAt - a.createdAt),
+    [elements, ids],
+  );
 
   if (sorted.length === 0) {
     return (
@@ -64,6 +68,18 @@ export function ElementsGrid() {
                     <ImageUp aria-hidden="true" className="size-4" />
                   </IconButton>
                 </Tooltip>
+                <AddToProjectPopover
+                  refs={[{ kind: "element", id: element.id }]}
+                  side="bottom"
+                  align="end"
+                  trigger={(props) => (
+                    <Tooltip label="Add to project" side="bottom" align="end">
+                      <IconButton {...props} aria-label={`Add ${element.name} to a project`} variant="glass" size="sm">
+                        <FolderPlus aria-hidden="true" className="size-4" />
+                      </IconButton>
+                    </Tooltip>
+                  )}
+                />
                 <Tooltip label="Remove Element" side="bottom" align="end">
                   <IconButton
                     aria-label={`Remove ${element.name}`}

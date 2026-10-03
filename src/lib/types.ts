@@ -8,6 +8,12 @@
 
 export type Mode = "image" | "video";
 
+/** Every kind of media the studio keeps: generated images and videos, plus voice audio. */
+export type MediaKind = Mode | "audio";
+
+/** The three Create workspaces. */
+export type CreateKind = MediaKind;
+
 /** Legacy speed/quality choice kept for older drafts and assets; new work uses `quality`. */
 export type Intent = "auto" | "photoreal" | "fast";
 
@@ -50,7 +56,8 @@ export type MediaReference =
   | { source: "asset"; id: string; url: string; width: number; height: number; color?: string };
 
 export interface GenSettings {
-  mode: Mode;
+  /** "audio" only appears on voice assets, whose script is kept in `prompt` so search and copy work everywhere. */
+  mode: MediaKind;
   prompt: string;
   intent: Intent;
   /** Explicit model override from the advanced selector; undefined means "let the intent decide". */
@@ -82,7 +89,7 @@ export interface GenSettings {
 
 export interface Asset {
   id: string;
-  kind: Mode;
+  kind: MediaKind;
   url: string;
   /** Still frame for video assets. */
   posterUrl?: string;
@@ -110,6 +117,62 @@ export interface Asset {
   modelLabel?: string;
   /** The seed the provider used, so a result can be reproduced. */
   seed?: number;
+  /** Voice audio only: what was spoken, by whom, and the file that came back. */
+  audio?: AudioMeta;
+}
+
+/* ---------- Audio (voice) ---------- */
+
+/** Voice models are per language (Aura-2 English and Aura-2 Spanish). */
+export type VoiceLanguage = "en" | "es";
+
+/** MP3 (default) or uncompressed WAV. */
+export type AudioFormat = "mp3" | "wav";
+
+export interface VoiceSettings {
+  script: string;
+  language: VoiceLanguage;
+  speaker: string;
+  format: AudioFormat;
+  /** MP3 only: 48000 (default) or 32000 bits per second. */
+  bitRate?: number;
+  /** WAV only: 24000 (default), 48000 or 16000 Hz. */
+  sampleRate?: number;
+}
+
+export interface AudioMeta extends VoiceSettings {
+  /** Seconds, measured from the decoded file. */
+  duration?: number;
+  contentType: string;
+  bytes?: number;
+  /** Real peak amplitudes (0–1) measured from the decoded audio, for the waveform. */
+  peaks?: number[];
+}
+
+/* ---------- Projects ---------- */
+
+/** Something a project holds: one of the user's assets or Elements, by id (media is never copied). */
+export interface ProjectRef {
+  kind: "asset" | "element";
+  id: string;
+}
+
+/** A tile on a project's Board: a reference to project media, or a short text note. */
+export type BoardCard =
+  | { id: string; type: "ref"; ref: ProjectRef }
+  | { id: string; type: "note"; title?: string; text: string };
+
+/** One creative idea or campaign: its media (by reference), a Board, and a cover. */
+export interface Project {
+  id: string;
+  name: string;
+  description?: string;
+  /** Asset id chosen as the cover; otherwise the newest image is used. */
+  coverAssetId?: string;
+  items: (ProjectRef & { addedAt: number })[];
+  board: BoardCard[];
+  createdAt: number;
+  updatedAt: number;
 }
 
 /** A reusable saved visual reference (not a trained model). Lives in the browser like the Library. */
@@ -167,6 +230,8 @@ export interface Job {
   setId?: string;
   /** How this job came about within its set. */
   origin?: "generate" | "regenerate" | "variations" | "edit";
+  /** Project the results join when they finish. */
+  projectId?: string;
   createdAt: number;
   finishedAt?: number;
 }
@@ -183,4 +248,4 @@ export interface ExploreItem {
   tags: string[];
 }
 
-export type LibraryFilter = "all" | "images" | "videos" | "favorites" | "elements";
+export type LibraryFilter = "all" | "images" | "videos" | "audio" | "favorites" | "elements";

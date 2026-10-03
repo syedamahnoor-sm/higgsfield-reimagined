@@ -1,5 +1,5 @@
 import { createId } from "@/lib/id";
-import type { Asset, GenSettings, Job } from "@/lib/types";
+import type { Asset, GenSettings, Job, Mode } from "@/lib/types";
 import { useSession } from "@/store/session";
 import { useStudio } from "@/store/studio";
 import { getEngine } from "./index";
@@ -15,12 +15,16 @@ export interface StartOptions {
   /** Join an existing generation set (Regenerate / Variations / Edit). */
   setId?: string;
   origin?: Job["origin"];
+  /** Project the results join; defaults to the workspace's current project context. */
+  projectId?: string;
 }
 
 export async function startGeneration(input: GenSettings, options: StartOptions = {}) {
-  const engine = getEngine(input.mode, input);
+  const mode: Mode = input.mode === "video" ? "video" : "image";
+  const engine = getEngine(mode, input);
   const studio = useStudio.getState();
-  const settings: GenSettings = structuredClone({ ...input, prompt: input.prompt.trim() });
+  const settings: GenSettings = structuredClone({ ...input, mode, prompt: input.prompt.trim() });
+  const projectId = options.projectId ?? studio.projectContext[mode];
   const job: Job = {
     id: createId("job"),
     settings,
@@ -28,14 +32,15 @@ export async function startGeneration(input: GenSettings, options: StartOptions 
     progress: 0,
     assetIds: [],
     engineId: engine.id,
-    parentId: options.parentId ?? studio.draftParents[settings.mode],
+    parentId: options.parentId ?? studio.draftParents[mode],
     setId: options.setId,
     origin: options.origin ?? "generate",
+    projectId: projectId && studio.projects[projectId] ? projectId : undefined,
     createdAt: Date.now(),
   };
   if (!job.setId) job.setId = job.id;
   studio.addJob(job);
-  useSession.getState().addJob(settings.mode, job.id);
+  useSession.getState().addJob(mode, job.id);
 
   try {
     const result = await engine.generate({
@@ -45,7 +50,7 @@ export async function startGeneration(input: GenSettings, options: StartOptions 
     const now = Date.now();
     const assets: Asset[] = result.media.map((m, i) => ({
       id: createId("asset"),
-      kind: settings.mode,
+      kind: mode,
       url: m.url,
       posterUrl: m.posterUrl,
       width: m.width,
@@ -81,6 +86,11 @@ export async function startGeneration(input: GenSettings, options: StartOptions 
 export function retryJob(jobId: string) {
   const job = useStudio.getState().jobs[jobId];
   if (!job) return;
-  useSession.getState().removeJob(job.settings.mode, jobId);
-  void startGeneration(job.settings, { parentId: job.parentId, setId: job.setId === job.id ? undefined : job.setId, origin: job.origin });
+  useSession.getState().removeJob(job.settings.mode === "video" ? "video" : "image", jobId);
+  void startGeneration(job.settings, {
+    parentId: job.parentId,
+    setId: job.setId === job.id ? undefined : job.setId,
+    origin: job.origin,
+    projectId: job.projectId,
+  });
 }

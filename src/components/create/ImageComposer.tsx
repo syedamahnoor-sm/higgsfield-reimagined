@@ -110,7 +110,9 @@ export function ImageComposer() {
       if (!response.ok || !json.prompt) {
         toast({
           tone: "error",
-          message: json.reason === "rate_limited" ? "Enhance is busy. Try again in a minute; your prompt is unchanged." : "Couldn't enhance right now. Your prompt is unchanged.",
+          message: json.reason === "rate_limited"
+              ? "AI Enhance is temporarily unavailable. Your prompt is unchanged; try again later."
+              : "Couldn't enhance right now. Your prompt is unchanged.",
         });
         return;
       }

@@ -1,6 +1,7 @@
 import "server-only";
 import { ProviderError, type ImageProvider, type ProviderImage, type ProviderRequest } from "./image-provider";
 import { randomInt } from "node:crypto";
+import { cloudflareFailure } from "./cloudflare-errors";
 
 /**
  * Cloudflare Workers AI, FLUX.2 [klein] 9B text-to-image via the REST API.
@@ -40,14 +41,6 @@ export function imageInfo(bytes: Uint8Array, fallback: { width: number; height: 
   return { contentType: "image/png", ...fallback };
 }
 
-function failureFor(status: number): ProviderError {
-  if (status === 401 || status === 403) return new ProviderError("auth", { status });
-  if (status === 429) return new ProviderError("rate_limited", { status });
-  if (status === 408 || status === 504) return new ProviderError("timeout", { status });
-  if (status === 400 || status === 422) return new ProviderError("rejected", { status });
-  return new ProviderError("failed", { status });
-}
-
 async function generateOne(
   { accountId, token }: { accountId: string; token: string },
   { prompt, width, height, signal, inputImage }: ProviderRequest,
@@ -69,7 +62,7 @@ async function generateOne(
     body: form,
     signal,
   });
-  if (!response.ok) throw failureFor(response.status);
+  if (!response.ok) throw await cloudflareFailure(response);
 
   const json = (await response.json()) as { success?: boolean; result?: { image?: string }; image?: string };
   const base64 = json.result?.image ?? json.image;

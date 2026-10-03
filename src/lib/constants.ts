@@ -1,10 +1,11 @@
-import type { AiCameraPreset, AspectRatio, ImageCount, Mode, MotionPreset, VideoDuration, VideoResolution } from "@/lib/types";
+import type { AiCameraPreset, AspectRatio, CreateKind, ImageCount, MotionPreset, VideoDuration, VideoResolution } from "@/lib/types";
 
 export const APP_NAME = "Ember Studio";
 
-export const MODES: { id: Mode; label: string; href: string }[] = [
+export const MODES: { id: CreateKind; label: string; href: string }[] = [
   { id: "image", label: "Image", href: "/create/image" },
   { id: "video", label: "Video", href: "/create/video" },
+  { id: "audio", label: "Audio", href: "/create/audio" },
 ];
 
 export const ASPECT_RATIOS: { id: AspectRatio; label: string; w: number; h: number }[] = [

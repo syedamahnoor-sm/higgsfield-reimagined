@@ -45,7 +45,7 @@ export class ProviderError extends Error {
   constructor(
     readonly reason: ProviderFailure,
     /** For server logs only: HTTP status and request id, never bodies or keys. */
-    readonly diagnostic: { status?: number; requestId?: string } = {},
+    readonly diagnostic: { status?: number; requestId?: string; code?: number } = {},
   ) {
     super(reason);
   }

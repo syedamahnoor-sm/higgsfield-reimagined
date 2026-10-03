@@ -1,7 +1,8 @@
 "use client";
 
 import { usePathname, useRouter } from "next/navigation";
-import { Bookmark, Clapperboard, Copy, Download, Heart, ImageUp, Loader2, MoreHorizontal, PencilLine, Shuffle } from "lucide-react";
+import { Bookmark, Clapperboard, Copy, Download, FolderPlus, Heart, ImageUp, Loader2, MoreHorizontal, PencilLine, Shuffle } from "lucide-react";
+import { AddToProjectPanel } from "@/components/projects/AddToProject";
 import { useState } from "react";
 import { IconButton } from "@/components/ui/IconButton";
 import { MenuItem, Popover } from "@/components/ui/Popover";
@@ -133,7 +134,7 @@ function EditForm({ asset, setId, onDone }: { asset: Asset; setId?: string; onDo
   );
 }
 
-/** Less-common actions in one tidy menu: Edit, Copy prompt, Save as Element. */
+/** Less-common actions in one tidy menu: Edit, Save as Element, Add to project, Copy prompt. */
 export function AssetMoreMenu({
   asset,
   setId,
@@ -149,14 +150,14 @@ export function AssetMoreMenu({
   initialView?: "menu" | "edit";
   trigger?: Parameters<typeof Popover>[0]["trigger"];
 }) {
-  const [view, setView] = useState<"menu" | "edit" | "save">(initialView);
+  const [view, setView] = useState<"menu" | "edit" | "save" | "project">(initialView);
   const [open, setOpen] = useState(false);
   return (
     <Popover
       label="More actions"
       side={side}
       align="end"
-      width={view === "menu" ? 240 : 300}
+      width={view === "menu" ? 240 : view === "project" ? 280 : 300}
       open={open}
       onOpenChange={(v) => {
         setOpen(v);
@@ -176,6 +177,8 @@ export function AssetMoreMenu({
       {(close) =>
         view === "edit" ? (
           <EditForm asset={asset} setId={setId} onDone={close} />
+        ) : view === "project" ? (
+          <AddToProjectPanel refs={[{ kind: "asset", id: asset.id }]} onDone={close} />
         ) : view === "save" ? (
           <SaveElementForm
             source={{ url: asset.url, width: asset.width, height: asset.height, color: asset.color, defaultName: elementNameFrom(asset.settings.prompt), sourceAssetId: asset.id }}
@@ -185,6 +188,7 @@ export function AssetMoreMenu({
           <div className="flex flex-col">
             <MenuItem icon={<PencilLine className="size-4" />} label="Edit with prompt…" hint="AI edit of this image" onSelect={() => setView("edit")} />
             <MenuItem icon={<Bookmark className="size-4" />} label="Save as Element…" hint="Reuse it as a reference later" onSelect={() => setView("save")} />
+            <MenuItem icon={<FolderPlus className="size-4" />} label="Add to project…" hint="Keep it with a creative idea" onSelect={() => setView("project")} />
             <MenuItem
               icon={<Copy className="size-4" />}
               label="Copy prompt"

@@ -43,7 +43,7 @@ export async function POST(request: Request) {
     return Response.json({ prompt: enhanced });
   } catch (error) {
     const failure = error instanceof ProviderError ? error : new ProviderError("failed");
-    console.warn(`[enhance] reason=${failure.reason} status=${failure.diagnostic.status ?? "-"}`);
+    console.warn(`[enhance] reason=${failure.reason} status=${failure.diagnostic.status ?? "-"} code=${failure.diagnostic.code ?? "-"}`);
     return Response.json({ error: "unavailable", reason: failure.reason }, { status: failure.reason === "rate_limited" ? 429 : 503 });
   } finally {
     clearTimeout(timer);

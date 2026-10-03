@@ -1,7 +1,8 @@
 "use client";
 
-import { Bookmark, Clapperboard, Compass, Download, Heart, ImageUp, Images, Loader2, Shuffle, Sparkles } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { ArrowDownUp, AudioLines, Bookmark, Clapperboard, Compass, Download, Heart, ImageUp, Images, Loader2, Search, SearchX, Shuffle, Sparkles, X } from "lucide-react";
+import { useMemo, useRef, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { ACTION_COPY, TileActions, useAssetActions } from "@/components/create/ResultActions";
 import { HOVER_REVEAL, MediaCard } from "@/components/media/MediaCard";
@@ -20,37 +21,71 @@ import { VideoFilePlayer } from "@/components/motion/VideoFilePlayer";
 import { ReferenceRow } from "@/components/media/ReferenceRow";
 import { MotionPlayer } from "@/components/motion/MotionPlayer";
 import type { Asset, LibraryFilter } from "@/lib/types";
+import { assetSearchText, elementSearchText, matchesQuery, projectNamesById } from "@/lib/search";
+import { OpenAssetContext } from "@/components/lineage/Lineage";
+import { AudioCard, AudioDetails, AudioViewerStage } from "./AudioLibrary";
+import { AssetRelations } from "./AssetRelations";
 import { useHydrated } from "@/store/hydration";
 import { useStudio } from "@/store/studio";
 
 const GRID_SIZES = "(min-width: 1536px) 20vw, (min-width: 1280px) 25vw, (min-width: 768px) 33vw, 50vw";
 
+const FILTERS: LibraryFilter[] = ["all", "images", "videos", "audio", "favorites", "elements"];
+
 function matches(asset: Asset, filter: LibraryFilter) {
   if (filter === "images") return asset.kind === "image";
   if (filter === "videos") return asset.kind === "video";
+  if (filter === "audio") return asset.kind === "audio";
   if (filter === "favorites") return asset.favorite;
   return true;
 }
 
 export function LibraryView() {
   const hydrated = useHydrated();
+  const params = useSearchParams();
   const assets = useStudio(useShallow((s) => Object.values(s.assets)));
-  const elementCount = useStudio((s) => Object.keys(s.elements).length);
-  const [filter, setFilter] = useState<LibraryFilter>("all");
-  const [openId, setOpenId] = useState<string | null>(null);
+  const elements = useStudio(useShallow((s) => Object.values(s.elements)));
+  const projects = useStudio((s) => s.projects);
+  const initialFilter = params.get("filter") as LibraryFilter | null;
+  const [filter, setFilter] = useState<LibraryFilter>(initialFilter && FILTERS.includes(initialFilter) ? initialFilter : "all");
+  // Deep link: /library?open=<asset id> opens that asset (from lineage, Audio, the command palette).
+  const [openId, setOpenId] = useState<string | null>(params.get("open"));
+  const openParam = params.get("open");
+  const [seenParam, setSeenParam] = useState(openParam);
+  if (openParam !== seenParam) {
+    // A new deep link while already on the Library (adjusting state during render, not in an effect).
+    setSeenParam(openParam);
+    if (openParam) setOpenId(openParam);
+  }
+  const [query, setQuery] = useState("");
+  const [order, setOrder] = useState<"newest" | "oldest">("newest");
 
-  const sorted = useMemo(() => [...assets].sort((a, b) => b.createdAt - a.createdAt), [assets]);
-  const visible = useMemo(() => sorted.filter((a) => matches(a, filter)), [sorted, filter]);
+  const names = useMemo(() => projectNamesById(projects), [projects]);
+  const sorted = useMemo(
+    () => [...assets].sort((a, b) => (order === "newest" ? b.createdAt - a.createdAt : a.createdAt - b.createdAt)),
+    [assets, order],
+  );
+  const searched = useMemo(
+    () => (query.trim() ? sorted.filter((a) => matchesQuery(assetSearchText(a, names.get(a.id)), query)) : sorted),
+    [sorted, query, names],
+  );
+  const matchingElements = useMemo(
+    () => (query.trim() ? elements.filter((e) => matchesQuery(elementSearchText(e, names.get(e.id)), query)) : elements),
+    [elements, query, names],
+  );
+  const visible = useMemo(() => searched.filter((a) => matches(a, filter)), [searched, filter]);
   const counts = useMemo(
     () => ({
-      all: sorted.length,
-      images: sorted.filter((a) => a.kind === "image").length,
-      videos: sorted.filter((a) => a.kind === "video").length,
-      favorites: sorted.filter((a) => a.favorite).length,
-      elements: elementCount,
+      all: searched.length,
+      images: searched.filter((a) => a.kind === "image").length,
+      videos: searched.filter((a) => a.kind === "video").length,
+      audio: searched.filter((a) => a.kind === "audio").length,
+      favorites: searched.filter((a) => a.favorite).length,
+      elements: matchingElements.length,
     }),
-    [sorted, elementCount],
+    [searched, matchingElements],
   );
+  const elementCount = elements.length;
 
   if (!hydrated) return <div className="min-h-[50dvh]" aria-busy="true" />;
 
@@ -60,7 +95,7 @@ export function LibraryView() {
         <EmptyState
           icon={Images}
           title="No generations yet"
-          description="Everything you create is saved here on this device, ready to view, favorite, remix or download."
+          description="Every image, video and voice you create is saved here on this device, ready to search, favorite, reuse or add to a project."
           action={
             <div className="flex flex-wrap justify-center gap-2">
               <ButtonLink href="/create/image" variant="primary">
@@ -78,9 +113,23 @@ export function LibraryView() {
     );
   }
 
+  const searching = query.trim().length > 0;
+
   return (
     <>
-      <div className="mb-5">
+      <div className="mb-5 flex flex-col gap-3">
+        <div className="flex items-center gap-2">
+          <LibrarySearch value={query} onChange={setQuery} />
+          <button
+            type="button"
+            onClick={() => setOrder((o) => (o === "newest" ? "oldest" : "newest"))}
+            aria-label={`Sort: ${order === "newest" ? "newest first" : "oldest first"}. Change order`}
+            className="flex h-10 shrink-0 items-center gap-2 rounded-card border border-line px-3 text-[13px] font-medium text-fg-muted transition-colors hover:border-line-strong hover:text-fg"
+          >
+            <ArrowDownUp aria-hidden="true" className="size-4" />
+            <span className="hidden sm:inline">{order === "newest" ? "Newest" : "Oldest"}</span>
+          </button>
+        </div>
         <FilterChips
           label="Filter library"
           value={filter}
@@ -89,16 +138,29 @@ export function LibraryView() {
             { id: "all", label: "All", count: counts.all },
             { id: "images", label: "Images", count: counts.images },
             { id: "videos", label: "Videos", count: counts.videos },
+            { id: "audio", label: "Audio", count: counts.audio },
             { id: "favorites", label: "Favorites", count: counts.favorites },
             { id: "elements", label: "Elements", count: counts.elements },
           ]}
         />
+        {searching && filter !== "elements" && matchingElements.length > 0 && (
+          <p className="text-[13px] text-fg-muted">
+            {matchingElements.length === 1 ? "1 Element also matches." : `${matchingElements.length} Elements also match.`}{" "}
+            <button type="button" onClick={() => setFilter("elements")} className="font-medium text-accent hover:underline">
+              Show Elements
+            </button>
+          </p>
+        )}
       </div>
 
       {filter === "elements" ? (
-        <ElementsGrid />
+        searching && matchingElements.length === 0 && elementCount > 0 ? (
+          <SearchEmpty query={query} onClear={() => setQuery("")} />
+        ) : (
+          <ElementsGrid ids={searching ? matchingElements.map((e) => e.id) : undefined} />
+        )
       ) : visible.length === 0 ? (
-        <FilteredEmpty filter={filter} />
+        searching ? <SearchEmpty query={query} onClear={() => setQuery("")} /> : <FilteredEmpty filter={filter} />
       ) : (
         <ul className="columns-2 gap-3 md:columns-3 xl:columns-4 2xl:columns-5 [&>li]:mb-3">
           {visible.map((asset, i) => (
@@ -137,16 +199,29 @@ export function AssetViewer({
   };
 
   return (
+    <OpenAssetContext.Provider value={onOpenChange}>
     <MediaViewer
-      label={open ? (open.renderer === "motion" ? "Motion Preview" : open.renderer === "file" ? "AI video" : "Library item") : "Library"}
+      label={
+        open
+          ? open.kind === "audio"
+            ? "Voice"
+            : open.renderer === "motion"
+              ? "Motion Preview"
+              : open.renderer === "file"
+                ? "AI video"
+                : "Library item"
+          : "Library"
+      }
       media={
         open && {
           key: open.id,
           src: open.url,
           alt: open.settings.prompt,
-          aspect: open.width / open.height,
+          aspect: open.kind === "audio" ? 16 / 10 : open.width / open.height,
           node:
-            open.renderer === "file" ? (
+            open.kind === "audio" ? (
+              <AudioViewerStage asset={open} />
+            ) : open.renderer === "file" ? (
               <VideoFilePlayer src={open.url} mode="controls" />
             ) : open.renderer === "motion" ? (
               <MotionPlayer
@@ -164,7 +239,9 @@ export function AssetViewer({
       onNext={openIndex >= 0 && assets.length > 1 ? () => step(1) : undefined}
       details={
         open &&
-        (open.renderer === "file" ? (
+        (open.kind === "audio" ? (
+          <AudioDetails asset={open} />
+        ) : open.renderer === "file" ? (
           <AiVideoDetails asset={open} />
         ) : open.renderer === "motion" ? (
           <MotionDetails asset={open} onReplay={() => setReplayKey((k) => k + 1)} />
@@ -173,6 +250,66 @@ export function AssetViewer({
         ))
       }
     />
+    </OpenAssetContext.Provider>
+  );
+}
+
+function LibrarySearch({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const ref = useRef<HTMLInputElement>(null);
+  return (
+    <div className="relative min-w-0 flex-1 sm:max-w-md">
+      <Search aria-hidden="true" className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-fg-subtle" />
+      <label htmlFor="library-search" className="sr-only">
+        Search your Library
+      </label>
+      <input
+        ref={ref}
+        id="library-search"
+        type="search"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Escape" && value) {
+            e.preventDefault();
+            onChange("");
+          }
+        }}
+        placeholder="Search prompts, scripts, Elements, projects…"
+        autoComplete="off"
+        className="h-10 w-full rounded-card border border-line bg-surface-1 pr-9 pl-9 text-sm text-fg placeholder:text-fg-subtle focus:border-white/20 focus:outline-none [&::-webkit-search-cancel-button]:hidden"
+      />
+      {value && (
+        <button
+          type="button"
+          aria-label="Clear search"
+          onClick={() => {
+            onChange("");
+            ref.current?.focus();
+          }}
+          className="absolute top-1/2 right-1.5 grid size-7 -translate-y-1/2 place-items-center rounded-chip text-fg-subtle transition-colors hover:bg-surface-3 hover:text-fg"
+        >
+          <X aria-hidden="true" className="size-4" />
+        </button>
+      )}
+    </div>
+  );
+}
+
+function SearchEmpty({ query, onClear }: { query: string; onClear: () => void }) {
+  return (
+    <EmptyPanel>
+      <EmptyState
+        icon={SearchX}
+        className="flex-1"
+        title={`Nothing matches “${query.trim()}”`}
+        description="Search looks through prompts, edit instructions, voice scripts, Element names, project names, directions and looks. Try fewer or different words."
+        action={
+          <Button variant="secondary" onClick={onClear}>
+            Clear search
+          </Button>
+        }
+      />
+    </EmptyPanel>
   );
 }
 
@@ -199,6 +336,24 @@ function FilteredEmpty({ filter }: { filter: LibraryFilter }) {
       </EmptyPanel>
     );
   }
+  if (filter === "audio") {
+    return (
+      <EmptyPanel>
+        <EmptyState
+          icon={AudioLines}
+          className="flex-1"
+          title="No audio yet"
+          description="Voices you generate in Create → Audio are saved here, ready to play, download or add to a project. Try a voiceover for one of your videos."
+          action={
+            <ButtonLink href="/create/audio" variant="secondary">
+              <AudioLines aria-hidden="true" className="size-4" />
+              Open Audio
+            </ButtonLink>
+          }
+        />
+      </EmptyPanel>
+    );
+  }
   if (filter === "favorites") {
     return (
       <EmptyPanel>
@@ -219,6 +374,7 @@ function FilteredEmpty({ filter }: { filter: LibraryFilter }) {
 }
 
 function LibraryCard({ asset, preload, onOpen }: { asset: Asset; preload: boolean; onOpen: () => void }) {
+  if (asset.kind === "audio" && asset.audio) return <AudioCard asset={asset} onOpen={onOpen} />;
   if (asset.renderer === "motion") return <MotionCard asset={asset} onOpen={onOpen} />;
   if (asset.renderer === "file") return <AiVideoCard asset={asset} onOpen={onOpen} />;
   return (
@@ -333,6 +489,8 @@ function AssetDetails({ asset }: { asset: Asset }) {
       />
 
       {asset.settings.reference && <ReferenceRow asset={asset} label={editing ? "Source image (edited)" : "Generated with a reference"} />}
+
+      <AssetRelations asset={asset} />
 
       {asset.attribution && (
         <p className="text-xs text-fg-subtle">
